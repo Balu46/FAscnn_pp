@@ -17,9 +17,10 @@ Najlepszy model osiąga **70.68% mIoU** na zbiorze Cityscapes przy natywnej rozd
 
 ---
 
-## 💻 Wymagania sprzętowe
+## 💻 Wymagania sprzętowe i systemowe (Prerequisites)
 
-Aby w pełni wykorzystać możliwości modelu i przeprowadzić proces uczenia lub ewaluacji, wymagane jest następujące środowisko sprzętowe:
+Aby w pełni wykorzystać możliwości modelu i zreplikować wszystkie wyniki, wymagane jest następujące środowisko:
+- **System Operacyjny**: Linux (skrypty Bash i wsparcie środowiska)
 - **Karta graficzna**: NVIDIA z obsługą CUDA
 - **Pamięć VRAM**: minimum 16 GB
 - **Przestrzeń dyskowa**: minimum 60 GB wolnego miejsca (głównie na zbiór danych Cityscapes oraz zapisywanie modeli)

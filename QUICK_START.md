@@ -2,6 +2,14 @@
 
 Ten przewodnik pomoże Ci błyskawicznie skonfigurować środowisko, pobrać dane i odtworzyć wszystkie wyniki projektu.
 
+## Wymagania wstępne (Prerequisites)
+
+Przed rozpoczęciem upewnij się, że Twój system spełnia poniższe wymagania:
+- **System Operacyjny**: Linux (natywna obsługa skryptów Bash)
+- **Karta graficzna**: NVIDIA z obsługą CUDA
+- **Pamięć VRAM**: min. 16 GB
+- **Wolne miejsce na dysku**: min. 60 GB
+
 ## 1. Konfiguracja Środowiska
 
 Najpierw skonfiguruj środowisko. Skrypt `setup.sh` automatycznie stworzy wirtualne środowisko (`.venv`) dla Pythona i zainstaluje niezbędne biblioteki.
