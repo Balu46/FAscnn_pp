@@ -1,0 +1,290 @@
+\chapter{Przegląd literatury}
+
+Segmentacja semantyczna obrazów stanowi jedno z kluczowych zagadnień współczesnego przetwarzania danych wizualnych. Jej celem jest przyporządkowanie każdemu pikselowi obrazu odpowiedniej klasy semantycznej, co umożliwia szczegółową analizę struktury sceny. Metody te znajdują zastosowanie m.in. w systemach wspomagania kierowcy (ADAS), autonomicznej nawigacji robotów, analizie ruchu drogowego, monitoringu wizyjnym oraz systemach medycznych.
+
+W ostatnich latach w dziedzinie segmentacji dominują modele oparte na głębokich sieciach neuronowych, w tym architektury CNN oraz transformatory wizualne. Modele te osiągają bardzo wysokie wyniki, zarówno pod względem jakości segmentacji, jak i szybkości działania. Jednakże wiele z nich wymaga użycia jednostek GPU do efektywnej inferencji, co ogranicza ich zastosowanie w urządzeniach o ograniczonych zasobach obliczeniowych, takich jak systemy wbudowane czy urządzenia mobilne.
+
+Motywacją niniejszej pracy jest kompleksowe ulepszenie i rozbudowa architektury Fast-SCNN do wariantu nazwanego FAscnn++ (Fast Attention SCNN), który łączy szybkie wielostrumieniowe przetwarzanie cech z nowym mechanizmem uwagi zoptymalizowanym pod kątem szybkości inferencji na CPU. Celem tego podejścia jest zmniejszenie liczby operacji obliczeniowych oraz umożliwienie segmentacji obrazów w czasie bliskim rzeczywistemu na systemach z ograniczonymi zasobami, bez istotnej utraty jakości wyników.
+
+Niniejszy przegląd literatury koncentruje się na analizie najważniejszych architektur i metod segmentacji semantycznej w czasie rzeczywistym, które mogą stanowić inspirację lub punkt odniesienia dla architektury FAscnn++. Szczególny nacisk położono na metody redukcji złożoności obliczeniowej oraz efektywne mechanizmy uwagi.
+
+
+
+\section{ENet: A Deep Neural Network Architecture for Real-time Semantic Segmentation}
+\textbf{Autorzy:} Adam Paszke, Abhishek Chaurasia, Sangpil Kim, Eugenio Culurciello
+
+\textbf{Opis metody:}
+ENet (Efficient Neural Network) to architektura zaprojektowana z myślą o maksymalnej efektywności obliczeniowej przy zachowaniu akceptowalnej dokładności segmentacji. Architektura wykorzystuje tzw. \textit{bottleneck modules} inspirowane ResNet, ale zoptymalizowane pod kątem redukcji liczby parametrów i operacji. Kluczowe innowacje obejmują:
+\begin{itemize}
+    \item Wczesną redukcję wymiarowości (downsampling) w początkowych warstwach.
+    \item Asymetryczne konwolucje (np. $5\times1$ i $1\times5$ zamiast $5\times5$).
+    \item Konwolucje rozszerzone (\textit{dilated convolutions}) dla zwiększenia pola recepcyjnego.
+    \item Regularyzację \textit{spatial dropout} zamiast standardowego dropout.
+\end{itemize}
+
+\textbf{Zalety:}
+\begin{itemize}
+    \item Bardzo wysoka efektywność obliczeniowa ($75\times$ mniej FLOPs niż SegNet).
+    \item Mała liczba parametrów ($\approx 0.4$M), umożliwiająca deployment na urządzeniach mobilnych.
+    \item Możliwość pracy w czasie rzeczywistym na GPU ($>100$ FPS dla rozdzielczości $640\times360$).
+    \item Dobra równowaga między dokładnością a szybkością.
+\end{itemize}
+
+\textbf{Wady:}
+\begin{itemize}
+    \item Niższa dokładność w porównaniu do większych modeli (np. DeepLab).
+    \item Problemy z segmentacją małych obiektów ze względu na agresywny downsampling.
+    \item Wymaga starannego dostrojenia hiperparametrów.
+\end{itemize}
+
+\textbf{Dziedziny zastosowań:}
+\begin{itemize}
+    \item Autonomiczna jazda (segmentacja scen drogowych).
+    \item Robotyka mobilna.
+    \item Aplikacje AR/VR wymagające niskiego opóźnienia.
+    \item Urządzenia embedded z ograniczonymi zasobami.
+\end{itemize}
+
+\textbf{Ograniczenia:}
+Kompromis między efektywnością a dokładnością może być nieakceptowalny w aplikacjach wymagających wysokiej precyzji. Ograniczona zdolność do generalizacji na bardzo złożone sceny.
+
+\section{BiSeNet: Bilateral Segmentation Network for Real-time Semantic Segmentation}
+\textbf{Autorzy:} Changqian Yu, Jingbo Wang, Chao Peng, Changxin Gao, Gang Yu, Nong Sang
+
+\textbf{Opis metody:}
+BiSeNet wprowadza dwuścieżkową architekturę (\textit{bilateral architecture}) łączącą:
+\begin{itemize}
+    \item \textbf{Spatial Path} -- zachowuje wysoką rozdzielczość przestrzenną dla precyzyjnej lokalizacji granic obiektów.
+    \item \textbf{Context Path} -- wykorzystuje lekki model (np. Xception, ResNet) do ekstrakcji kontekstu semantycznego z dużym polem recepcyjnym.
+    \item \textbf{Feature Fusion Module (FFM)} -- inteligentnie łączy cechy z obu ścieżek.
+    \item \textbf{Attention Refinement Module (ARM)} -- wzmacnia istotne cechy kontekstowe.
+\end{itemize}
+
+\textbf{Zalety:}
+\begin{itemize}
+    \item Doskonała równowaga między dokładnością a szybkością ($105$ FPS na rozdzielczości $2048\times1024$).
+    \item Skuteczne zachowanie szczegółów przestrzennych dzięki Spatial Path.
+    \item Możliwość wykorzystania różnych backbonów w Context Path.
+    \item Wyniki \textit{state-of-the-art} na zbiorze Cityscapes w kategorii real-time.
+\end{itemize}
+
+\textbf{Wady:}
+\begin{itemize}
+    \item Większa złożoność architektury niż w przypadku jednościeżkowych modeli.
+    \item Wymaga więcej pamięci GPU ze względu na równoległe przetwarzanie dwóch ścieżek.
+\end{itemize}
+
+\textbf{Dziedziny zastosowań:}
+\begin{itemize}
+    \item Autonomiczne pojazdy (szczególnie w scenariuszach miejskich).
+    \item Systemy monitoringu wizyjnego.
+    \item Analiza scen w czasie rzeczywistym.
+\end{itemize}
+
+\section{Fast-SCNN: Fast Semantic Segmentation Network}
+\textbf{Autorzy:} Rudra P K Poudel, Stephan Liwicki, Roberto Cipolla
+
+\textbf{Opis metody:}
+Fast-SCNN to ultra-szybka architektura zaprojektowana specjalnie dla urządzeń mobilnych i embedded. Składa się z trzech głównych modułów:
+\begin{itemize}
+    \item \textbf{Learning to Downsample} -- efektywna redukcja wymiarowości przy użyciu \textit{depthwise separable convolutions}.
+    \item \textbf{Global Feature Extractor} -- wykorzystuje \textit{inverted residual blocks} (z MobileNetV2) oraz Pyramid Pooling Module.
+    \item \textbf{Feature Fusion} -- łączy cechy niskiego i wysokiego poziomu.
+\end{itemize}
+
+\textbf{Zalety:}
+\begin{itemize}
+    \item Ekstremalnie wysoka szybkość ($123$ FPS na rozdzielczości $1024\times2048$).
+    \item Bardzo mała liczba parametrów ($\approx 1.1$M).
+    \item Możliwość działania na urządzeniach mobilnych w czasie rzeczywistym.
+\end{itemize}
+
+\textbf{Wady:}
+\begin{itemize}
+    \item Niższa dokładność w porównaniu do BiSeNet czy ICNet.
+    \item Ograniczona zdolność do segmentacji bardzo małych obiektów.
+\end{itemize}
+
+\textbf{Dziedziny zastosowań:}
+\begin{itemize}
+    \item Aplikacje mobilne (smartfony, tablety).
+    \item Drony i roboty autonomiczne.
+    \item Systemy wbudowane z ograniczonymi zasobami.
+\end{itemize}
+
+\section{ICNet: Image Cascade Network for Real-time Semantic Segmentation}
+\textbf{Autorzy:} Hengshuang Zhao, Xiaojuan Qi, Xiaoyong Shen, Jianping Shi, Jiaya Jia
+
+\textbf{Opis metody:}
+ICNet wykorzystuje kaskadową strukturę przetwarzającą obraz w trzech różnych rozdzielczościach:
+\begin{itemize}
+    \item Niska rozdzielczość ($1/4$) -- szybkie przetwarzanie dla kontekstu globalnego.
+    \item Średnia rozdzielczość ($1/2$) -- równowaga między szczegółami a szybkością.
+    \item Wysoka rozdzielczość ($1/1$) -- precyzyjna segmentacja granic.
+\end{itemize}
+Wyniki z różnych rozdzielczości są stopniowo łączone za pomocą \textit{Cascade Feature Fusion}.
+
+\textbf{Zalety:}
+\begin{itemize}
+    \item Wysoka dokładność przy zachowaniu \textit{real-time performance} ($30$ FPS dla $1024\times2048$).
+    \item Efektywne wykorzystanie informacji \textit{multi-scale}.
+    \item Możliwość wykorzystania pretrenowanych modeli (PSPNet) jako backbone.
+\end{itemize}
+
+\textbf{Wady:}
+\begin{itemize}
+    \item Wyższa złożoność obliczeniowa niż Fast-SCNN czy ENet.
+    \item Wymaga więcej pamięci ze względu na przetwarzanie \textit{multi-resolution}.
+\end{itemize}
+
+\textbf{Dziedziny zastosowań:}
+\begin{itemize}
+    \item Autonomiczna jazda wymagająca wysokiej dokładności.
+    \item Systemy wymagające kompromisu między dokładnością a szybkością.
+\end{itemize}
+
+\section{FasterSeg: Searching for Faster Real-time Semantic Segmentation}
+\textbf{Autorzy:} Wuyang Chen, Xinyu Gong, Xianming Liu, Qian Zhang, Yuan Li, Zhangyang Wang
+
+\textbf{Opis metody:}
+FasterSeg wykorzystuje \textit{Neural Architecture Search} (NAS) do automatycznego projektowania architektury zoptymalizowanej pod kątem szybkości i dokładności. Kluczowe innowacje:
+\begin{itemize}
+    \item \textit{Multi-resolution search space} uwzględniający różne rozdzielczości przetwarzania.
+    \item \textit{Latency-aware NAS} -- bezpośrednia optymalizacja pod kątem rzeczywistego czasu wykonania.
+    \item \textit{Teacher-student training} dla poprawy dokładności.
+\end{itemize}
+
+\textbf{Zalety:}
+\begin{itemize}
+    \item Automatyczne projektowanie architektury dostosowanej do konkretnego sprzętu.
+    \item Lepsza równowaga dokładność-szybkość niż ręcznie projektowane modele.
+    \item Wyniki \textit{state-of-the-art} w kategorii ultra-fast segmentation.
+\end{itemize}
+
+\textbf{Wady:}
+\begin{itemize}
+    \item Bardzo wysokie koszty obliczeniowe procesu NAS.
+    \item Trudność w interpretacji i modyfikacji znalezionej architektury.
+\end{itemize}
+
+
+\section{Real-time Semantic Segmentation with Fast Attention (FANet)}
+\textbf{Opis metody:}
+FANet (\textit{Fast Attention Network}) to architektura proponująca nowatorskie podejście do mechanizmów uwagi w czasie rzeczywistym. Głównym elementem jest \textit{Fast Attention Module}, który pozwala na szybkie przetwarzanie kontekstu bez wysokiego kosztu obliczeniowego typowego dla standardowych mechanizmów \textit{self-attention}. Metoda ta często wykorzystuje:
+\begin{itemize}
+    \item Lekkie moduły uwagi integrowane z kręgosłupem sieci (np. ResNet-18 lub ResNet-34).
+    \item Mechanizm uczenia się wag przestrzennych i kanałowych w sposób zoptymalizowany.
+    \item Uproszczoną strukturę dekodera dla zachowania niskiej latencji.
+\end{itemize}
+
+\textbf{Zalety:}
+\begin{itemize}
+    \item Znacząca poprawa dokładności (mIoU) w porównaniu do sieci bez uwagi (np. BiSeNet) przy niewielkim spadku szybkości FPS.
+    \item Efektywne modelowanie zależności dalekiego zasięgu.
+    \item Możliwość łatwej integracji z różnymi backbone'ami.
+\end{itemize}
+
+\textbf{Wady:}
+\begin{itemize}
+    \item Mimo optymalizacji, moduły uwagi nadal wprowadzają pewien narzut obliczeniowy.
+    \item Może wymagać większej pamięci GPU podczas treningu w porównaniu do najprostszych metod (np. ENet).
+\end{itemize}
+
+\textbf{Dziedziny zastosowań:}
+\begin{itemize}
+    \item Segmentacja scen miejskich (Cityscapes).
+    \item Systemy wymagające wysokiej precyzji w czasie rzeczywistym.
+\end{itemize}
+
+\section{On Efficient Real-Time Semantic Segmentation}
+\textbf{Opis metody:}
+Artykuł przedstawia kompleksową analizę technik i strategii projektowania efektywnych architektur dla segmentacji w czasie rzeczywistym. Omawia:
+\begin{itemize}
+    \item Zasady projektowania dla \textit{real-time segmentation}.
+    \item Porównanie różnych strategii downsampling i upsampling.
+    \item Wpływ różnych modułów (pooling, attention, skip connections) na wydajność.
+\end{itemize}
+
+\textbf{Wkład do dziedziny:}
+\begin{itemize}
+    \item Standaryzacja metodologii benchmarkingu.
+    \item Identyfikacja najskuteczniejszych "klocków budulcowych".
+    \item Wskazówki dotyczące optymalizacji architektury.
+\end{itemize}
+
+\section{Real-time Semantic Segmentation for Autonomous Driving: A Review of CNNs}
+\textbf{Opis metody:}
+Kompleksowy przegląd literatury koncentrujący się na zastosowaniu CNN do segmentacji semantycznej w kontekście autonomicznej jazdy. Artykuł analizuje:
+\begin{itemize}
+    \item Ewolucję architektur od FCN do nowoczesnych modeli czasu rzeczywistego.
+    \item Specyficzne wyzwania w \textit{autonomous driving} (różne warunki oświetleniowe, pogodowe).
+    \item Zbiory danych i metryki ewaluacji.
+\end{itemize}
+
+\textbf{Wkład do dziedziny:}
+\begin{itemize}
+    \item Systematyzacja wiedzy o segmentacji dla autonomicznej jazdy.
+    \item Analiza luki między badaniami akademickimi a wymaganiami przemysłowymi.
+\end{itemize}
+
+\section{Searching for MobileNetV3}
+\textbf{Autorzy:} Andrew Howard et al.
+
+\textbf{Opis metody:}
+MobileNetV3 to trzecia generacja architektur MobileNet, zaprojektowana przy użyciu kombinacji:
+\begin{itemize}
+    \item NAS dla optymalizacji struktury bloków.
+    \item Algorytmu NetAdapt dla dostrojenia liczby filtrów.
+    \item Nowych funkcji aktywacji (\textit{h-swish}).
+    \item Modułów Squeeze-and-Excitation.
+\end{itemize}
+
+\textbf{Zalety:}
+\begin{itemize}
+    \item Doskonała efektywność na urządzeniach mobilnych.
+    \item Dwie wersje: Large (wysoka dokładność) i Small (ultra-szybka).
+    \item Znacząca poprawa w stosunku do MobileNetV2.
+\end{itemize}
+
+\textbf{Wady:}
+\begin{itemize}
+    \item Złożona architektura trudna do modyfikacji.
+    \item Proces projektowania (NAS) jest kosztowny obliczeniowo.
+\end{itemize}
+
+\section{Systematic Integration of Attention Modules into CNNs}
+\textbf{Opis metody:}
+Artykuł przedstawia systematyczne badanie nad integracją różnych mechanizmów uwagi w sieciach konwolucyjnych. Analizuje:
+\begin{itemize}
+    \item Różne typy attention: \textit{spatial}, \textit{channel}, \textit{self-attention}.
+    \item Optymalne miejsca w architekturze do umieszczania modułów uwagi.
+    \item Wpływ attention na dokładność i złożoność obliczeniową.
+\end{itemize}
+
+\textbf{Wkład do dziedziny:}
+\begin{itemize}
+    \item Systematyzacja wiedzy o mechanizmach uwagi.
+    \item Identyfikacja najskuteczniejszych strategii integracji.
+    \item Empiryczna walidacja na wielu zadaniach.
+\end{itemize}
+
+\section{Podsumowanie i Wnioski}
+
+Przegląd literatury pokazuje wyraźną ewolucję w podejściu do segmentacji semantycznej w czasie rzeczywistym. Można wyróżnić kilka kluczowych trendów:
+
+\begin{enumerate}
+    \item \textbf{Redukcja złożoności obliczeniowej:} wykorzystanie \textit{depthwise separable convolutions} (Fast-SCNN, MobileNetV3) oraz \textit{bottleneck modules} (ENet).
+    \item \textbf{Architektury multi-path/multi-resolution:} struktury dwuścieżkowe (BiSeNet) i kaskadowe (ICNet).
+    \item \textbf{Mechanizmy uwagi:} wykorzystanie \textit{channel attention} oraz \textit{Fast Attention Modules} (FANet).
+    \item \textbf{Neural Architecture Search:} automatyczne projektowanie architektur (FasterSeg, MobileNetV3).
+\end{enumerate}
+
+Wszystkie analizowane metody balansują między trzema kluczowymi aspektami: dokładnością (mIoU), szybkością (FPS) oraz efektywnością (liczba parametrów i FLOPs). Wybór odpowiedniej architektury zależy od konkretnego zastosowania:
+\begin{itemize}
+    \item \textbf{Ultra-fast applications} ($>100$ FPS): ENet, Fast-SCNN.
+    \item \textbf{Balanced approach} ($30-100$ FPS): BiSeNet, ICNet.
+    \item \textbf{High accuracy} ($<30$ FPS): Modele z zaawansowanym attention lub większe backbones.
+\end{itemize}
+
+Przedstawione metody stanowią solidną podstawę dla dalszego rozwoju systemów segmentacji semantycznej w czasie rzeczywistym. Analiza rozwiązań takich jak ENet, BiSeNet czy Fast-SCNN wskazuje, że kluczem do wydajności na CPU -- co jest celem modyfikacji FAscnn++ -- jest agresywna redukcja wymiarowości na wczesnych etapach oraz stosowanie lekkich modułów kontekstowych zamiast kosztownych obliczeniowo bloków typu self-attention. Wnioski te zostaną wykorzystane przy rozbudowie architektury bazowej.
+

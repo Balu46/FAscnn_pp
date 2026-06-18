@@ -1,0 +1,540 @@
+\documentclass[12pt,oneside,a4paper]{report}
+
+% ----------------------- USTAWIENIA JĘZYKA I CZCIONEK -----------------------
+\usepackage[polish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ----------------------- UKŁAD STRONY --------------------------------------
+\usepackage[a4paper,margin=2.5cm,includefoot]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{indentfirst}
+
+% ----------------------- HIPERŁĄCZA ----------------------------------------
+\usepackage[hidelinks]{hyperref}
+\usepackage{bookmark}
+
+% ----------------------- CYTOWANIA I BIBLIOGRAFIA ---------------------------
+\usepackage{csquotes}
+\usepackage[backend=biber,style=authoryear,sorting=nyt]{biblatex}
+\addbibresource{references.bib}
+
+% ----------------------- DANE DOKUMENTU ------------------------------------
+\newcommand{\autor}{Jan Zakroczymski}
+\newcommand{\tytul}{FAscnn++: Rozwinięcie architektury Fast-SCNN o mechanizm Fast Attention i efektywny moduł fuzji cech}
+\newcommand{\uczelnia}{UKSW - Uniwersytet Kardynała Stefana Wyszyńskiego}
+\newcommand{\rok}{2025}
+
+\begin{document}
+
+\begin{titlepage}
+  \begin{center}
+    {\Large \uczelnia \\[0.5cm]}
+    {\Large Sprawozdanie z postępów pracy (rozszerzony abstrakt)}\\[1.5cm]
+    {\LARGE \textbf{\tytul}}\\[1.5cm]
+    {\large Autor: \autor}\\[0.2cm]
+    {\large Rok: \rok}\\[2cm]
+  \end{center}
+\end{titlepage}
+
+\tableofcontents
+
+\chapter{Wstęp}
+Semantyczna segmentacja obrazu polega na przypisaniu każdemu pikselowi etykiety
+klasy opisującej znaczenie fragmentu sceny. W odróżnieniu od klasyfikacji i
+detekcji obiektów, segmentacja semantyczna wymaga jednoczesnego zachowania
+szczegółów geometrycznych oraz spójność kontekstową w skali całego obrazu.
+W praktyce oznacza to, że algorytm musi rozumieć zarówno granice obiektów
+(np. krawędzie pojazdu), jak i relacje pomiędzy elementami sceny (np. fakt, że
+chodnik graniczy z jezdnią). Jest to zadanie obliczeniowo wymagające, ale
+niezwykle istotne w systemach wspomagania kierowcy, autonomicznych robotach
+mobilnych, diagnostyce medycznej czy monitoringu wizyjnym.
+
+Rozwój sieci konwolucyjnych oraz technik uczenia głębokiego spowodował szybki
+postęp w jakości segmentacji. Modele takie jak FCN, U-Net, SegNet, DeepLab czy
+PSPNet ustanowiły standardy dokładności na popularnych zbiorach danych
+\parencite{long2015fully,ronneberger2015u,badrinarayanan2017segnet,chen2018deeplab,zhao2017pspnet}.
+Jednocześnie wzrosła złożoność modeli, co utrudnia ich zastosowanie w systemach
+wbudowanych i urządzeniach o ograniczonych zasobach. Dla aplikacji w czasie
+rzeczywistym krytyczne są trzy czynniki: liczba operacji obliczeniowych,
+zapotrzebowanie na pamięć oraz opóźnienie inferencji.
+
+W odpowiedzi na te potrzeby rozwijane są architektury lekkie, ukierunkowane na
+szybkie przetwarzanie. ENet, Fast-SCNN czy BiSeNet wprowadzają uproszczone bloki
+konwolucyjne oraz modułowe podejście do ekstrakcji cech, osiągając wysoką
+prędkość na GPU i CPU \parencite{paszke2016enet,mehta2019fast,yu2018bisenet}.
+Równolegle rozwijają się modele wykorzystujące uwagę i transformatory, które
+poprawiają modelowanie kontekstu sceny \parencite{vaswani2017attention,dosovitskiy2020vit,xie2021segformer}.
+Wyzwaniem pozostaje połączenie szybkiego przetwarzania z silnym modelowaniem
+zależności globalnych.
+
+Niniejsze sprawozdanie stanowi rozszerzony abstrakt pracy obejmujący jej pierwsze
+dwa rozdziały. Przedstawia kontekst problemu, motywację, tezę i metodologię
+badawczą, a także przegląd literatury w formie bibliografii. Dokument opisuje
+postępy nad autorską architekturą FAscnn++ (Fast Atencion SCNN) rozwijaną w
+ramach projektu FAscnn++ Fast Segmentation.
+
+\section{Zakres i cele sprawozdania}
+Celem sprawozdania jest uporządkowanie dotychczasowych prac i wskazanie jasnych
+kierunków dalszego rozwoju. Dokument podsumowuje fundamenty teoretyczne oraz
+uzasadnia potrzebę projektowania szybkiej architektury segmentacyjnej na CPU.
+W dalszej części zostanie przedstawiona teza oraz metodologia, które prowadzą
+od sformułowania problemu do weryfikacji hipotezy badawczej.
+
+\section{Ogólny opis projektu}
+Projekt FAscnn++ Fast Segmentation to implementacja kilku modeli segmentacji
+semantycznej, w tym ENet, jego modyfikacji oraz autorskiej architektury FAscnn++.
+Kod zorganizowano w postaci modułu treningowego i testowego w języku Python
+(PyTorch), z zestawem skryptów do treningu i ewaluacji. Jako podstawowy zbiór
+danych przyjęto Cityscapes \parencite{cordts2016cityscapes}, który jest
+standardem w badaniach segmentacji ulicznej.
+
+Z perspektywy użyteczności, architektura FAscnn++ ma docelowo umożliwiać działanie na
+urządzeniach o ograniczonej mocy obliczeniowej przy zachowaniu wysokiej jakości
+segmentacji. Projekt zakłada modułowy charakter sieci, umożliwiający łatwe
+porównanie z klasycznymi modelami oraz wprowadzanie wariantów architektury.
+
+\section{Cele naukowe i inżynierskie}
+Cele pracy mają dwojaki charakter. Z perspektywy naukowej celem jest zbadanie,
+czy uproszczony mechanizm uwagi może poprawić jakość segmentacji w lekkich
+architekturach. Oznacza to nie tylko zaprojektowanie nowego modułu, ale także
+analizę jego wpływu na mIoU i stabilność predykcji w różnych warunkach.
+
+Z perspektywy inżynierskiej celem jest stworzenie praktycznego modelu, który
+można uruchomić na sprzęcie bez dedykowanego GPU. W konsekwencji rozwiązanie
+musi być łatwe do trenowania, reprodukowalne oraz kompatybilne z typowymi
+pipeline'ami przetwarzania obrazów. Te cele determinują zarówno wybór architektury,
+jak i zakres eksperymentów.
+
+\section{Znaczenie problemu w praktyce}
+Zadania segmentacji semantycznej pojawiają się wszędzie tam, gdzie system musi
+zrozumieć strukturę sceny w sposób ciągły i przestrzenny. W ruchu drogowym
+segmentacja umożliwia rozróżnianie jezdni, chodników, znaków i uczestników ruchu.
+W robotyce pozwala planować trajektorie ruchu na podstawie mapy przeszkód i
+regionów przejezdnych. W diagnostyce medycznej segmentacja odpowiada za
+precyzyjne wydzielanie tkanek, co wspiera planowanie terapii i analizę
+patologii. W monitoringu wizyjnym kluczowe jest szybkie wykrywanie obszarów
+zainteresowania i obiektów, które pojawiają się na obrazie.
+
+We wszystkich tych zastosowaniach systemy działają w warunkach silnych
+ograniczeń czasowych. Długie opóźnienie przetwarzania oznacza ryzyko błędnej
+reakcji w krytycznym momencie. Dlatego w praktyce liczy się nie tylko sama
+jakość segmentacji, lecz także stabilność działania, przewidywalność czasu
+inferencji oraz łatwość wdrożenia na różnorodnych platformach sprzętowych.
+
+\section{Wyzwania obliczeniowe}
+Współczesne modele segmentacji korzystają z głębokich sieci, które generują
+wiele map cech o wysokiej rozdzielczości. Kluczowym wyzwaniem jest utrzymanie
+balansu pomiędzy szczegółowością wyników a kosztami obliczeniowymi. Wysoka
+rozdzielczość ułatwia rekonstrukcję granic obiektów, ale prowadzi do dużej
+liczby operacji i wymaganej pamięci. Z drugiej strony agresywny downsampling
+zmniejsza koszt, lecz powoduje utratę drobnych detali.
+
+Kolejnym problemem jest dostępność zasobów. W zastosowaniach wbudowanych
+często brakuje GPU, a modele muszą działać na wielordzeniowych CPU lub
+energooszczędnych akceleratorach. W takim środowisku kluczowe jest ograniczenie
+złożoności obliczeniowej oraz unikanie operacji o wysokim koszcie pamięciowym,
+takich jak pełna uwaga kwadratowa.
+
+Nie można pominąć aspektu danych. Wysokiej jakości adnotacje pikselowe są
+drogie w pozyskaniu, co ogranicza rozmiar zbiorów treningowych. W praktyce
+model musi efektywnie wykorzystywać ograniczony zbiór danych, a procedury
+augmentacji powinny wzmacniać uogólnianie bez wprowadzania sztucznych artefaktów.
+Z perspektywy projektu oznacza to konieczność starannego zaprojektowania
+strategii treningowej oraz kontrolowania ryzyka przeuczenia.
+
+\section{Wymagania real-time}
+System działający w czasie bliskim rzeczywistemu musi zapewniać stabilny czas
+inferencji. Oprócz średniej liczby FPS istotna jest zmienność czasu
+przetwarzania pomiędzy próbkami. Dla aplikacji sterujących pojazdami lub
+robotami, priorytetem jest przewidywalność opóźnienia i niezawodność modelu.
+Projekt FAscnn++ uwzględnia te wymagania, proponując architekturę, która minimalizuje
+wahania czasu przetwarzania, a jednocześnie zachowuje zdolność do modelowania
+kontekstu sceny.
+
+\section{Definicje i zakres pojęciowy}
+W obrębie przetwarzania obrazów wyróżnia się kilka pokrewnych zadań. Segmentacja
+semantyczna dotyczy przypisania etykiety klasowej każdemu pikselowi i nie
+rozróżnia instancji tego samego typu obiektów. Segmentacja instancyjna
+wydziela poszczególne obiekty w ramach jednej klasy, a segmentacja panoptyczna
+łączy oba podejścia w jeden system \parencite{he2017maskrcnn,kirillov2019panoptic}.
+W niniejszej pracy koncentruje się na segmentacji semantycznej, ponieważ stanowi
+ona naturalny punkt wyjścia dla zastosowań real-time.
+
+Ważne jest rozróżnienie pomiędzy metrykami jakości i wydajności. Metryki
+jakości, takie jak mIoU, opisują zgodność maski predykcyjnej z prawdą
+referencyjną. Metryki wydajności, takie jak FPS czy opóźnienie, określają
+prędkość inferencji. W praktyce oba aspekty muszą być uwzględnione jednocześnie,
+ponieważ wysoka jakość bez wymaganej prędkości nie spełnia założeń aplikacyjnych.
+
+\section{Kontekst badawczy}
+W literaturze można zauważyć rosnący trend rozwijania architektur lekkich oraz
+technik optymalizacyjnych, które pozwalają wdrażać modele w systemach
+wbudowanych. Coraz częściej publikacje raportują nie tylko mIoU, ale również
+parametry wydajności, liczbę operacji FLOPs czy zapotrzebowanie na pamięć.
+W tym kontekście projekt FAscnn++ wpisuje się w nurt badań nad segmentacją
+zorientowaną na zastosowania praktyczne i rzeczywiste ograniczenia sprzętowe.
+
+Istotne jest także przesunięcie w stronę modeli, które potrafią balansować
+lokalny kontekst z globalnymi zależnościami. Tradycyjne modele konwolucyjne
+opierają się na lokalnych filtrach, a zrozumienie zależności dalekiego zasięgu
+wymaga głębokich sieci i wieloskalowych mechanizmów. Rozwiązania oparte o uwagę
+rozszerzają te możliwości, ale często kosztem złożoności obliczeniowej.
+W efekcie istnieje realna potrzeba rozwiązań hybrydowych, które łączą zalety
+obu podejść.
+
+\chapter{Motywacja}
+Motywacja pracy wynika z łączenia dwóch sprzecznych wymagań: wysokiej jakości
+segmentacji oraz niskiego opóźnienia przetwarzania. Klasyczne modele zapewniają
+wysoką dokładność kosztem dużej liczby parametrów i kosztu obliczeniowego.
+W zastosowaniach wbudowanych, takich jak autonomiczne drony, roboty magazynowe
+czy systemy ADAS, model musi działać na CPU lub słabym akceleratorze i reagować
+niemal natychmiast. Ograniczenia te prowadzą do poszukiwania rozwiązań, które
+wykorzystują wiedzę z literatury, ale upraszczają architekturę i optymalizują
+przetwarzanie.
+
+Istotnym problemem w lekkich modelach jest utrata kontekstu globalnego. Modele
+real-time często operują na wysoce zredukowanych mapach cech, co ogranicza
+zdolność rozróżniania obiektów o podobnej teksturze lub barwie. Mechanizmy
+uwagi są skuteczne w modelowaniu relacji długozasięgowych, ale klasyczne
+implementacje uwagi są kosztowne obliczeniowo. Stwarza to potrzebę opracowania
+uproszczonego, szybkiego mechanizmu uwagi, który można integrować z lekkimi
+blokami konwolucyjnymi.
+
+Dodatkowa motywacja wynika z rosnącego znaczenia segmentacji w zastosowaniach
+praktycznych. Mapowanie drzew, detekcja infrastruktury drogowej, a także analiza
+medyczna lub przemysłowa korzystają z segmentacji jako elementu kluczowego
+pipeline'u. Dostęp do wydajnych modeli na CPU umożliwia wdrożenia w terenie,
+gdzie nie ma dostępu do wyspecjalizowanego sprzętu.
+
+W kontekście projektu FAscnn++ priorytetem jest stworzenie architektury, która łączy
+zalety wielogałęziowego przetwarzania (multi-branch) z uwagą przyjazną dla CPU.
+Rozwiązanie ma być jednocześnie proste w implementacji, łatwe do reprodukcji
+i kompatybilne z istniejącymi pipeline'ami treningowymi.
+
+\section{Problemy badawcze}
+Motywacja prowadzi do następujących problemów badawczych:
+\begin{itemize}
+  \item Jak zminimalizować koszt obliczeniowy bez drastycznej utraty jakości?
+  \item Czy uproszczony mechanizm uwagi może zwiększyć skuteczność lekkiej sieci?
+  \item Jak zaprojektować modularną architekturę, która pozwala na szybkie testy
+        wariantów i porównania z modelami bazowymi?
+  \item Jak zbalansować liczbę kanałów, głębokość sieci oraz rozmiar wejścia tak,
+        aby model pozostawał użyteczny na CPU?
+\end{itemize}
+
+\section{Oczekiwane korzyści}
+Oczekiwanym efektem pracy jest opracowanie architektury, która pozwoli uzyskać
+konkurencyjną jakość segmentacji na Cityscapes przy istotnie niższych kosztach
+obliczeniowych niż standardowe modele. Dodatkową wartością jest stworzenie
+pakietu kodu umożliwiającego reprodukcję wyników, trening oraz testy porównawcze.
+
+\section{Założenia projektowe}
+Projekt zakłada, że architektura FAscnn++ będzie kompatybilna z typowymi pipeline'ami
+uczenia głębokiego. Oznacza to wykorzystanie standardowych warstw konwolucyjnych
+i prostych modułów, które są dobrze wspierane przez biblioteki uczenia maszynowego.
+Istotne jest także unikanie nadmiernej zależności od specyficznych funkcji
+sprzętowych, co mogłoby utrudnić przenoszenie modelu między platformami.
+
+Zakłada się również możliwość stosowania metod optymalizacji po treningu, takich
+jak kwantyzacja lub przycinanie wag, które dodatkowo zmniejszają koszt
+inferencji \parencite{jacob2018quantization,han2015deepcompression}.
+Uwzględnienie tych narzędzi w projektowaniu architektury pozwala utrzymać
+przewagę w realnych wdrożeniach.
+
+\section{Luka badawcza}
+Istnieje wyraźna luka pomiędzy modelami o bardzo wysokiej jakości a modelami
+o wysokiej wydajności. Wiele architektur real-time skupia się na uproszczeniu
+przepływu obliczeń, ale rezygnuje z mechanizmów, które w nowoczesnych modelach
+zapewniają bogaty kontekst. Z drugiej strony, modele wykorzystujące uwagę
+osiągają lepsze wyniki, lecz koszt obliczeniowy często wyklucza je z zastosowań
+na CPU. FAscnn++ ma wypełnić tę lukę poprzez dostarczenie efektywnego mechanizmu
+uwagi, który nie blokuje zastosowań w czasie rzeczywistym.
+
+\section{Uwarunkowania wdrożeniowe}
+Wdrożenie modelu segmentacji w systemach produkcyjnych wymaga uwzględnienia
+ograniczeń energetycznych, kosztów sprzętowych oraz niezawodności. W wielu
+przypadkach docelowe platformy to komputery jednopłytowe, kontrolery wbudowane
+lub jednostki o niskim poborze mocy. Oznacza to, że nawet niewielka poprawa
+wydajności może mieć duże znaczenie dla realnych zastosowań, np. wydłużenia
+czasu pracy na baterii lub obniżenia kosztów infrastruktury.
+
+Ponadto w realnych systemach ważna jest łatwość integracji. Architektury, które
+nie wymagają specjalistycznych operatorów i pozwalają na uruchomienie na
+standardowych bibliotekach, są znacznie łatwiejsze do wdrożenia. Projekt FAscnn++
+ma na celu dostarczenie takiej architektury, która nie tylko spełnia wymagania
+wydajnościowe, ale również jest przyjazna dla procesów inżynierskich i testów.
+
+\chapter{Teza i metodologia}
+\section{Teza pracy}
+Teza pracy brzmi następująco: \emph{możliwe jest zaprojektowanie lekkiej
+architektury segmentacji semantycznej, która dzięki wielogałęziowemu przetwarzaniu
+oraz uproszczonemu mechanizmowi uwagi osiąga konkurencyjną jakość segmentacji
+przy czasie inferencji umożliwiającym działanie w czasie bliskim rzeczywistemu
+na CPU}.
+
+Teza zakłada, że odpowiednio skonstruowany blok uwagi, o liniowej złożoności
+obliczeniowej względem liczby pikseli, może poprawić modelowanie kontekstu bez
+znacznego wzrostu kosztu. Dodatkowo zakłada, że architektura wielogałęziowa
+pozwoli połączyć cechy lokalne i globalne, minimalizując utratę informacji.
+
+\section{Hipotezy pomocnicze}
+Weryfikacja tezy zostanie wsparta przez następujące hipotezy pomocnicze:
+\begin{itemize}
+  \item Zastosowanie głębokościowo-separowalnych konwolucji obniża koszt
+        obliczeniowy przy zachowaniu reprezentacji cech \parencite{howard2017mobilenets,chollet2017xception}.
+  \item Użycie modułów downsamplingu oraz fuzji cech w stylu Fast-SCNN zwiększa
+        wydajność i pozwala na kontrolowaną utratę rozdzielczości
+        \parencite{mehta2019fast}.
+  \item Mechanizm uwagi o zredukowanej złożoności (np. liniowej) poprawia
+        segmentację obiektów o złożonych kształtach bez znaczącego wzrostu czasu
+        inferencji \parencite{katharopoulos2020transformers,wang2020linformer}.
+\end{itemize}
+
+\section{Metodologia badawcza}
+Metodologia ma charakter projektowo-eksperymentalny i składa się z kilku etapów:
+
+\subsection{Analiza literatury i wymagań}
+Pierwszym krokiem jest przegląd literatury, obejmujący modele segmentacji oraz
+techniki optymalizacji obliczeń. Na tej podstawie wyodrębniane są cechy, które
+mają kluczowe znaczenie dla szybkości i jakości segmentacji, takie jak
+downsampling, fuzja cech oraz uwaga. Równolegle analizowane są wymagania
+sprzętowe, z naciskiem na inferencję na CPU.
+
+\subsection{Projekt architektury FAscnn++}
+Projekt architektury zakłada użycie kilku gałęzi przetwarzania. Jedna gałąź
+ekstrahuje cechy lokalne na wyższej rozdzielczości, druga buduje reprezentacje
+globalne na silnie zredukowanej siatce, a trzecia integruje informacje
+kontekstowe za pomocą szybkiej uwagi. W praktyce architektura wykorzystuje
+bloki typu bottleneck, głębokościowo-separowalne konwolucje oraz moduły fuzji
+cech podobne do tych z Fast-SCNN. Mechanizm uwagi jest uproszczony tak, aby
+złożoność obliczeniowa była zbliżona do liniowej.
+
+Kluczowym elementem jest sposób połączenia gałęzi. W FAscnn++ zakłada się, że
+informacje lokalne powinny zachować precyzję granic, natomiast informacje
+globalne powinny stabilizować klasyfikacje w regionach o słabych teksturach.
+Warstwa fuzji ma łączyć obie reprezentacje w sposób umożliwiający łatwą
+adaptację do różnych rozdzielczości wejściowych. W praktyce oznacza to
+zastosowanie operacji interpolacji oraz połączeń resztkowych.
+
+\subsection{Implementacja i pipeline treningowy}
+Model jest implementowany w PyTorch. Pipeline treningowy obejmuje:
+\begin{itemize}
+  \item przygotowanie danych Cityscapes z odpowiednim podziałem na zbiory,
+  \item trenowanie modeli bazowych (ENet, Fast-SCNN) jako punktów odniesienia,
+  \item trenowanie wariantów FAscnn++ w identycznych warunkach, aby zachować
+        porównywalność wyników,
+  \item logowanie metryk oraz zapisywanie najlepszych wag.
+\end{itemize}
+Ważnym elementem jest utrzymanie jednolitych hiperparametrów, takich jak
+rozmiar batcha, liczba epok i strategie optymalizacji, co umożliwia sprawiedliwe
+porównanie.
+
+\subsection{Ewaluacja i metryki}
+Ocena modeli odbywa się na podstawie standardowych metryk segmentacji:
+\begin{itemize}
+  \item \textbf{mIoU} (mean Intersection over Union) jako główna metryka jakości,
+  \item \textbf{Pixel Accuracy} do oceny ogólnej poprawności klasyfikacji pikseli,
+  \item \textbf{FPS oraz czas inferencji} mierzone na CPU i GPU,
+  \item \textbf{Liczba parametrów i FLOPs} jako wskaźniki złożoności.
+\end{itemize}
+Dodatkowo przewiduje się analizę jakościową, tj. ocenę wizualną wyników na
+przykładowych obrazach, ze szczególnym uwzględnieniem granic obiektów.
+
+\subsection{Eksperymenty porównawcze i ablacjne}
+Planowane są eksperymenty porównawcze z modelami referencyjnymi. Dodatkowo
+przewiduje się eksperymenty ablacjne, które ocenia wpływ poszczególnych modułów
+(np. uwagi, dodatkowych gałęzi) na wynik końcowy. Pozwoli to oszacować, które
+elementy architektury przynoszą największą poprawę przy minimalnym koszcie.
+
+\section{Kryteria sukcesu}
+Za sukces uznaje się uzyskanie mIoU na Cityscapes na poziomie porównywalnym z
+lekkimi modelami literaturowymi przy jednoczesnym osiągnięciu czasu inferencji
+na CPU pozwalającym na przetwarzanie w czasie bliskim rzeczywistemu. Dodatkowym
+kryterium jest stabilność trenowania oraz możliwość wdrożenia w praktycznym
+pipeline'ie.
+
+\section{Plan eksperymentów}
+Plan eksperymentów obejmuje kilka etapów. W pierwszej kolejności trenowane są
+modele bazowe z literatury, tak aby uzyskać punkty odniesienia dla metryk
+jakości i wydajności. Następnie trenowane są warianty FAscnn++ z różnymi konfiguracjami
+liczby gałęzi, szerokości kanałów oraz ustawień mechanizmu uwagi. W trzecim
+etapie wykonywane są eksperymenty ablacjne, w których usuwa się wybrane elementy
+architektury (np. moduł uwagi lub jedna z gałęzi), aby zbadać ich wpływ na wynik.
+
+\section{Zasady porównań i raportowania}
+Porównania będą prowadzone przy zachowaniu jednorodnych warunków treningu i
+ewaluacji. W szczególności wszystkie modele będą trenowane przez tę samą liczbę
+epok, na identycznym podziale danych, z tym samym schematem augmentacji.
+Raportowanie wyników obejmie tabele metryk jakości oraz wykresy zależności
+pomiędzy mIoU a kosztem obliczeniowym. Dodatkowo przewiduje się prezentację
+przykładowych map segmentacji w celu zilustrowania różnic w jakości granic.
+
+\section{Reprodukowalność i narzędzia}
+Projekt opiera się na PyTorch oraz zestawie skryptów uruchamiających trening
+i testy. Dane wejściowe są przygotowywane zgodnie z typowym podziałem Cityscapes,
+a konfiguracje treningowe zapisywane są w logach. Dla zapewnienia powtarzalności
+wyników przewiduje się jawne ustawienie ziarna losowości oraz raportowanie
+kluczowych parametrów, takich jak rozmiar wejścia, liczba epok i typ optymalizatora.
+
+\section{Przygotowanie danych i augmentacje}
+Zbiór Cityscapes zawiera obrazy o wysokiej rozdzielczości, co w praktyce wymaga
+skalowania lub wycinków podczas treningu. W projekcie planuje się stosowanie
+augmentacji geometrycznych (losowe przycięcia, odbicia poziome) oraz
+augmentacji fotometrycznych (zmiany jasności i kontrastu), aby poprawić
+uogólnianie modelu. Szczególne znaczenie mają augmentacje, które nie naruszają
+struktury obiektów o znaczeniu semantycznym, np. znaków drogowych.
+
+W celu kontroli porównywalności wszystkie modele będą trenowane na tym samym
+zestawie transformacji. Pozwoli to jednoznacznie przypisać ewentualne różnice
+w wynikach do zmian architektury, a nie do różnych procedur przygotowania danych.
+
+\section{Profilowanie wydajności}
+Ocena wydajności będzie obejmować pomiar czasu inferencji w scenariuszach
+jednordzeniowych i wielordzeniowych. Ważne jest nie tylko średnie FPS, ale
+także analiza percentyli opóźnienia, które oddają stabilność działania.
+Profilowanie zostanie przeprowadzone na sprzęcie referencyjnym (CPU) oraz
+uzupełnione o pomiary FLOPs i zużycia pamięci. Takie podejście pozwala
+jednoznacznie wskazać, czy poprawa jakości jest uzasadniona wzrostem kosztu.
+
+\section{Funkcje straty i optymalizacja}
+W segmentacji semantycznej standardowo stosuje się funkcje straty oparte o
+entropię krzyżową, często z wagami klas w celu kompensacji nierównowagi
+pomiędzy kategoriami. W projekcie rozważa się dodatkowo użycie strat pomocniczych,
+np. strat na niższych rozdzielczościach, aby stabilizować uczenie wczesnych
+warstw. Optymalizacja zostanie przeprowadzona przy użyciu standardowych
+algorytmów (np. Adam lub SGD z momentum) z harmonogramem zmiany kroku uczenia.
+
+\section{Ograniczenia i ryzyka}
+Największym ryzykiem jest brak wystarczającej poprawy jakości w stosunku do
+modeli bazowych przy zachowaniu niskiego kosztu obliczeniowego. Istnieje również
+ryzyko, że mechanizm uwagi mimo uproszczeń nadal będzie generował znaczny narzut
+czasowy. Dodatkowo, wyniki uzyskane na Cityscapes mogą nie w pełni uogólnić się
+na inne domeny, co ogranicza przenaszalność rozwiązania.
+
+\section{Struktura docelowej pracy}
+Planowana praca końcowa będzie składała się z rozdziału wprowadzającego,
+przeglądu literatury, opisu architektury FAscnn++, części eksperymentalnej oraz
+wniosków. Sprawozdanie stanowi podstawę do rozwinięcia pierwszych rozdziałów
+i stworzenia spójnej narracji, która zostanie uzupełniona o wyniki eksperymentalne.
+
+\section{Harmonogram dalszych prac}
+Na dalszym etapie planuje się przeprowadzenie pełnych eksperymentów na
+Cityscapes, w tym treningu wariantów FAscnn++ oraz modeli bazowych. Kolejny krok
+to analiza wyników, przygotowanie tabel i wykresów oraz opracowanie wniosków
+z eksperymentów ablacjnych. Ostatni etap obejmie dopracowanie opisu architektury,
+integrację wyników z częścią teoretyczną oraz przygotowanie pełnej wersji pracy.
+
+\chapter{Przegląd literatury}
+Przegląd literatury obejmuje cztery obszary: (1) klasyczne modele segmentacji
+oparte na CNN, (2) lekkie i szybkie architektury real-time, (3) mechanizmy uwagi
+i transformatory wizualne oraz (4) zbiory danych i standardy ewaluacji.
+
+\section{Klasyczne modele segmentacji}
+Podstawowym kamieniem milowym są sieci FCN, które jako pierwsze pokazały, że
+konwolucyjne modele można adaptować do predykcji per-pikselowej
+\parencite{long2015fully}. Kolejnym krokiem była architektura U-Net, bardzo
+popularna w segmentacji medycznej, wykorzystująca połączenia typu skip
+\parencite{ronneberger2015u}. SegNet zaproponował podejście z enkoderem i
+dekoderem opartym o indeksery maksymalnego poolingu
+\parencite{badrinarayanan2017segnet}. Z kolei DeepLab zastosował konwolucje
+atrous i CRF w celu poprawy detali granic \parencite{chen2018deeplab}.
+PSPNet wprowadził pyramid pooling dla lepszego modelowania kontekstu globalnego
+\parencite{zhao2017pspnet}, a ICNet wykorzystał wieloskalowe przetwarzanie dla
+przyspieszenia segmentacji \parencite{zhao2018icnet}.
+
+\section{Wieloskalowość i fuzja cech}
+Wiele architektur opiera się na fuzji informacji z różnych poziomów
+rozdzielczości. Feature Pyramid Networks (FPN) wprowadziły ujednolicony sposób
+łączenia map cech w detekcji, ale podejście to znalazło również zastosowanie w
+segmentacji \parencite{lin2017fpn}. W praktyce fuzja wieloskalowa pozwala
+zachować drobne detale z płytszych warstw i łączyć je z semantyką z warstw
+głębokich. Podejścia takie stanowią inspiracje dla projektowania multi-branch
+w FAscnn++, gdzie każda gałąź odpowiada za inny zakres skali.
+
+\section{Lekkie architektury real-time}
+ENet był jedną z pierwszych architektur zaprojektowanych dla segmentacji w
+czasie rzeczywistym, z naciskiem na małe zużycie pamięci i parametrów
+\parencite{paszke2016enet}. Fast-SCNN rozszerzył te idee o efektywne moduły
+downsamplingu i fuzji cech \parencite{mehta2019fast}. BiSeNet zaproponował dwie
+gałęzie przetwarzania: jedna szybka i druga dokładna, łączone w module fuzji
+\parencite{yu2018bisenet}. W kontekście lekkich sieci istotne są również prace
+dotyczące głębokościowo-separowalnych konwolucji (MobileNet, Xception), które
+redukują koszty obliczeniowe \parencite{howard2017mobilenets,chollet2017xception}.
+
+Typowe strategie w modelach real-time obejmują wczesne zmniejszanie rozdzielczości,
+wykorzystanie bloków typu bottleneck oraz ograniczenie liczby kanałów w głębszych
+warstwach. W praktyce prowadzi to do znacznego spadku FLOPs kosztem pewnej utraty
+detali. Kluczowe jest więc dobranie takich mechanizmów fuzji, które pozwolą
+odzyskiwać szczegóły w dekoderze bez znacznego narzutu obliczeniowego.
+
+\section{Uwaga i transformatory}
+Mechanizmy uwagi zrewolucjonizowały przetwarzanie sekwencji i znalazły zastosowanie
+w wizji komputerowej \parencite{vaswani2017attention,dosovitskiy2020vit}.
+Transformatory wizualne, takie jak SegFormer, potrafią modelować zależności
+globalne bez kosztownych dekoderów \parencite{xie2021segformer}.
+W kontekście lekkich modeli ważne są prace nad uwagą liniową, która redukuje
+złożoność obliczeniową, np. Linformer oraz Performer
+\parencite{wang2020linformer,choromanski2020performer}.
+
+Rozwijane są również podejścia hybrydowe, które łączą konwolucje z uwagą.
+Pozwalają one wykorzystać lokalną indukcję konwolucyjną, zachowując jednocześnie
+zdolność do modelowania relacji dalekiego zasięgu. W praktyce takie podejścia
+mogą być szczególnie atrakcyjne dla architektur real-time, ponieważ ograniczają
+koszt uwagi do wybranych warstw lub skompresowanych reprezentacji.
+
+\section{Zbiory danych i metryki}
+Cityscapes to jeden z najważniejszych zbiorów danych do segmentacji miejskiej,
+obejmujący wysokiej jakości adnotacje pikselowe
+\parencite{cordts2016cityscapes}. Standardowymi metrykami oceny są mIoU oraz
+Pixel Accuracy, uzupełniane o miary wydajności (FPS, opóźnienie).
+W literaturze spotyka się również porównania z innymi zbiorami, takimi jak
+CamVid, ADE20K czy COCO-Stuff \parencite{brostow2008camvid,zhou2017ade20k,caesar2018cocostuff},
+jednak Cityscapes pozostaje dominującym wyborem w przypadku architektur real-time.
+
+Zbiory miejskie, takie jak Cityscapes i CamVid, charakteryzują się dużą liczbą
+klas związanych z infrastrukturą drogową, co sprawia, że modele muszą dobrze
+rozróżniać obiekty o podobnym wyglądzie, np. elewacje, pojazdy i chodniki.
+Z kolei zbiory ogólne, takie jak ADE20K czy COCO-Stuff, obejmują większą
+różnorodność scen, co pozwala testować uogólnianie modeli poza domeną ruchu
+drogowego. W niniejszej pracy Cityscapes stanowi główny punkt odniesienia,
+ponieważ odpowiada celom segmentacji w scenach miejskich.
+
+\section{Segmentacja instancyjna i panoptyczna}
+Choć zakres pracy skupia się na segmentacji semantycznej, warto wskazać prace
+związane z segmentacją instancyjną i panoptyczną. Mask R-CNN zaproponował
+uniwersalny framework do jednoczesnej detekcji i segmentacji instancji
+\parencite{he2017maskrcnn}. Koncepcja segmentacji panoptycznej łączy segmentację
+semantyczną i instancyjną w jednym ujednoliconym zadaniu
+\parencite{kirillov2019panoptic}. Te kierunki pokazują, jak ważna staje się
+kompletna interpretacja sceny, ale jednocześnie podkreślają rosnącą złożoność
+modeli i potrzebę optymalizacji wydajności.
+
+\section{Kompresja i optymalizacja modeli}
+W praktyce istotnym elementem jest kompresja modeli. Techniki takie jak
+przycinanie wag (pruning), kwantyzacja i destylacja wiedzy pozwalają znacznie
+zredukować rozmiar modelu i przyspieszyć inferencję
+\parencite{han2015deepcompression,jacob2018quantization,hinton2015distilling}.
+Choć celem projektu FAscnn++ jest zaprojektowanie lekkiej architektury, wykorzystanie
+tych technik może dodatkowo poprawić wydajność w docelowym wdrożeniu.
+
+Warto podkreślić, że kompresja modeli jest komplementarna wobec projektowania
+architektury. Nawet najlepsze techniki kompresji nie zrekompensują nadmiernej
+złożoności bazowej sieci, dlatego w projekcie najpierw zakłada się optymalizację
+struktury, a dopiero w kolejnym kroku rozważa się kwantyzację lub pruning.
+Taki kierunek pozwala zachować lepszą stabilność trenowania i kontrolować wpływ
+poszczególnych zabiegów na jakość segmentacji.
+
+\chapter{Podsumowanie postępów}
+Dotychczas wykonano analizę literatury, wybrano zbiór Cityscapes oraz
+zaimplementowano pipeline treningowy i testowy. Dodatkowo wdrożone zostały
+modele bazowe (ENet i Fast-SCNN) oraz kilka wariantów architektury FAscnn++.
+Kolejnym krokiem jest dopracowanie mechanizmu uwagi i przeprowadzenie
+szczegółowej ewaluacji porównawczej wraz z eksperymentami ablacjnymi.
+
+\printbibliography
+
+\end{document}

@@ -1,0 +1,109 @@
+\documentclass[12pt,oneside]{report}
+
+\usepackage[polish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+\usepackage[a4paper,margin=2.5cm,includefoot]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{indentfirst}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\nouppercase{\leftmark}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\usepackage[hidelinks]{hyperref}
+\usepackage{bookmark}
+\hypersetup{
+  pdfauthor={Jan Zakroczymski},
+  pdftitle={Autorska architektura FAscnn++ - Pierwsze 2 rozdziały},
+  pdfsubject={Praca licencjacka - fragment},
+  pdfkeywords={segmentacja semantyczna, FAscnn++, FastSCNN, ENet, Cityscapes}
+}
+
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+
+\usepackage{amsmath, amssymb, amsthm}
+\newtheorem{definicja}{Definicja}[chapter]
+\newtheorem{twierdzenie}{Twierdzenie}[chapter]
+\newtheorem{wniosek}{Wniosek}[chapter]
+
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  numbers=left,
+  numberstyle=\tiny,
+  stepnumber=1,
+  numbersep=8pt,
+  showstringspaces=false,
+  tabsize=2,
+  breaklines=true,
+  frame=single,
+  captionpos=b,
+  inputencoding=utf8,
+  extendedchars=true
+}
+
+\usepackage{csquotes}
+\usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
+\addbibresource{../rozdzialy/references.bib}
+\DeclareCiteCommand{\bibref}
+  {}
+  {\printtext[bibhyperref]{\mkbibbrackets{\printfield{labelnumber}}}}
+  {\addcomma\space}
+  {}
+
+\newcommand{\uczelnia}{UKSW - Uniwersytet Kardynała Stefana Wyszyńskiego}
+\newcommand{\wydzial}{Wydział Nauk Matematyczno-Przyrodniczych}
+\newcommand{\kierunek}{Informatyka}
+\newcommand{\miasto}{Warszawa}
+\newcommand{\rok}{2026}
+\newcommand{\autor}{Jan Zakroczymski}
+\newcommand{\nrindeksu}{126732}
+\newcommand{\promotor}{dr inż. Robert Kłopotek}
+\newcommand{\tytul}{FAscnn++: Rozwinięcie architektury Fast-SCNN o mechanizm Fast Attention i efektywny moduł fuzji cech}
+
+\begin{document}
+
+\begin{titlepage}
+  \begin{center}
+    {\Large \uczelnia \\
+    \wydzial \\[1cm]}
+
+    {\Large PRACA LICENCJACKA (Fragment: Rozdziały 1-2) \\[1cm]}
+
+    {\LARGE \textbf{\tytul} \\[1.5cm]}
+
+    \begin{tabular}{p{5cm}p{9cm}}
+      Autor: & \autor \\[-2pt]
+      Nr albumu: & \nrindeksu \\[-2pt]
+      Kierunek: & \kierunek \\[-2pt]
+      Promotor: & \promotor \\
+    \end{tabular}
+
+    \vfill
+    {\large \miasto\\ \rok}
+  \end{center}
+\end{titlepage}
+
+\tableofcontents
+
+\input{../rozdzialy/01_Wstep/wstep}
+\input{../rozdzialy/02_Problem_Badawczy/problem_badawczy}
+
+\printbibliography
+
+\end{document}

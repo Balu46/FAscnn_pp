@@ -1,0 +1,286 @@
+\documentclass[final,a4paper,openany,12pt]{mwbk}
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+\usepackage{url}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{makeidx}
+\usepackage{graphicx}
+%\prefixing % usunięto, bo psuje listings, a używamy utf8
+
+\renewcommand*\listalgorithmname{Spis algorytmów\protect}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\nouppercase{\leftmark}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\usepackage[hidelinks]{hyperref}
+\usepackage{bookmark}
+\hypersetup{
+  pdfauthor={Jan Zakroczymski},
+  pdftitle={FAscnn++: Rozwinięcie architektury Fast-SCNN o mechanizm Fast Attention i efektywny moduł fuzji cech w zastosowaniu segmentacji obrazów},
+  pdfsubject={Praca licencjacka},
+  pdfkeywords={segmentacja semantyczna, FAscnn++, FastSCNN, ENet, Cityscapes}
+}
+
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+
+\usepackage{amsmath, amssymb, amsthm}
+\newtheorem{definicja}{Definicja}[chapter]
+\newtheorem{twierdzenie}{Twierdzenie}[chapter]
+\newtheorem{wniosek}{Wniosek}[chapter]
+\newtheorem{twr}{Twierdzenie}[section]
+
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  numbers=left,
+  numberstyle=\tiny,
+  stepnumber=1,
+  numbersep=8pt,
+  showstringspaces=false,
+  tabsize=2,
+  breaklines=true,
+  frame=single,
+  captionpos=b,
+  inputencoding=utf8,
+  extendedchars=true
+}
+
+\usepackage{csquotes}
+\usepackage[backend=biber,style=numeric,sorting=nty]{biblatex}
+\addbibresource{../rozdzialy/references.bib}
+\DeclareCiteCommand{\bibref}
+  {}
+  {\printtext[bibhyperref]{\mkbibbrackets{\printfield{labelnumber}}}}
+  {\addcomma\space}
+  {}
+
+\newcommand{\uczelnia}{UNIWERSYTET KARDYNAŁA STEFANA WYSZYŃSKIEGO\\W WARSZAWIE}
+\newcommand{\wydzial}{WYDZIAŁ MATEMATYCZNO-PRZYRODNICZY\\SZKOŁA NAUK ŚCISŁYCH}
+\newcommand{\kierunek}{Informatyka}
+\newcommand{\miasto}{Warszawa}
+\newcommand{\rok}{2026}
+\newcommand{\autor}{Jan Zakroczymski}
+\newcommand{\nrindeksu}{126732}
+\newcommand{\promotor}{dr inż. Robert Kłopotek}
+\newcommand{\tytul}{FAscnn++: Rozwinięcie architektury Fast-SCNN o mechanizm\\Fast Attention i efektywny moduł fuzji cech\\w zastosowaniu segmentacji obrazów}
+
+% ustawienia do wydruku dwustronnego z uwzględnieniem dodatkowego miejsca na zszycie
+\setlength{\oddsidemargin}{0.46cm}   %margines nieparzysty
+\setlength{\evensidemargin}{-0.54cm} %margines parzysty
+\setlength{\textwidth}{16cm}         %szerokość tekstu na stronie
+\linespread{1.1}
+
+\begin{document}
+
+\begin{titlepage}
+\vspace{-0.5cm}
+
+{\centering
+{\footnotesize
+\begin{tabular}{c}
+\uczelnia\\
+\end{tabular}
+}
+\vspace{2.5cm}
+
+{\footnotesize
+\begin{tabular}{c}
+\wydzial\\
+\end{tabular}
+}
+\vspace{3.5cm}
+
+\renewcommand{\arraystretch}{1.5} % zwiększamy odległość między wierszami
+
+{\normalsize
+\begin{tabular}{c}
+\autor\\
+Nr alb.: \nrindeksu\\
+Kierunek studiów: \kierunek\\
+\end{tabular}
+}
+
+\vspace{1.5cm}
+
+{\large
+\begin{tabular}{c}
+\tytul\\
+\end{tabular}
+}
+
+}
+
+\renewcommand{\arraystretch}{1} % przywracamy domyślną odległość miedzy wierszami
+
+\vspace{5cm}
+
+\hspace{6cm}
+\begin{tabular}{l}
+Praca licencjacka wykonana\\
+pod kierunkiem naukowym\\
+\promotor
+\end{tabular}
+
+\vspace{3cm}
+
+{\centering
+
+{\small
+\begin{tabular}{c}
+{\miasto, \rok}\\
+\end{tabular}
+}
+
+}
+\end{titlepage}
+
+\tableofcontents
+
+\chapter*{Wykaz skrótów}
+\addcontentsline{toc}{chapter}{Wykaz skrótów}
+\begin{description}
+    \item[ADAS] \textit{Advanced Driver Assistance Systems} -- zaawansowane systemy wspomagania kierowcy
+    \item[AI] \textit{Artificial Intelligence} -- sztuczna inteligencja
+    \item[AMP] \textit{Automatic Mixed Precision} -- automatyczna precyzja mieszana
+    \item[ASPP] \textit{Atrous Spatial Pyramid Pooling} -- przestrzenne piramidalne łączenie atrusowe
+    \item[CBAM] \textit{Convolutional Block Attention Module} -- splotowy moduł uwagi blokowej
+    \item[CLI] \textit{Command Line Interface} -- interfejs wiersza poleceń
+    \item[CNN] \textit{Convolutional Neural Network} -- konwolucyjna sieć neuronowa
+    \item[CPU] \textit{Central Processing Unit} -- główna jednostka obliczeniowa (procesor)
+    \item[CRF] \textit{Conditional Random Field} -- warunkowe pola losowe
+    \item[DSConv] \textit{Depthwise Separable Convolution} -- splot separowalny w głąb
+    \item[FCN] \textit{Fully Convolutional Network} -- w pełni konwolucyjna sieć neuronowa
+    \item[FFM] \textit{Feature Fusion Module} -- moduł fuzji cech
+    \item[FN] \textit{False Negative} -- fałszywie negatywna detekcja (fałszywe odrzucenie)
+    \item[FP] \textit{False Positive} -- fałszywie pozytywna detekcja (fałszywy alarm)
+    \item[FPN] \textit{Feature Pyramid Network} -- piramidalna sieć cech
+    \item[FPS] \textit{Frames Per Second} -- liczba klatek na sekundę
+    \item[GFLOPs] \textit{Giga Floating Point Operations} -- miliardy operacji zmiennoprzecinkowych (miara złożoności modelu)
+    \item[GPU] \textit{Graphics Processing Unit} -- jednostka przetwarzania graficznego
+    \item[IoT] \textit{Internet of Things} -- Internet rzeczy
+    \item[IoU] \textit{Intersection over Union} -- miara pokrycia predykcji z wzorcem (przecięcie przez sumę)
+    \item[LR] \textit{Learning Rate} -- współczynnik uczenia
+    \item[mIoU] \textit{mean Intersection over Union} -- uśredniona wartość miary IoU dla wszystkich klas
+    \item[MLP] \textit{Multi-Layer Perceptron} -- wielowarstwowy perceptron
+    \item[NAS] \textit{Neural Architecture Search} -- automatyczne wyszukiwanie architektury sieci neuronowej
+    \item[PA] \textit{Pixel Accuracy} -- dokładność pikselowa
+    \item[R\&D] \textit{Research and Development} -- badania i rozwój
+    \item[SGD] \textit{Stochastic Gradient Descent} -- stochastyczny spadek wzdłuż gradientu
+    \item[SOTA] \textit{State of the Art} -- najnowocześniejsze osiągnięcia w dziedzinie
+    \item[TP] \textit{True Positive} -- prawdziwie pozytywna detekcja
+    \item[UAV] \textit{Unmanned Aerial Vehicle} -- bezzałogowy statek powietrzny (dron)
+\end{description}
+% \listoffigures
+% \listoftables
+% \lstlistoflistings
+
+\chapter*{Streszczenie}
+\addcontentsline{toc}{chapter}{Streszczenie}
+Praca przedstawia projekt i ocenę architektury FAscnn++ do semantycznej segmentacji obrazów w czasie rzeczywistym. 
+Głównym celem badań jest analiza kompromisu pomiędzy dokładnością segmentacji a wydajnością obliczeniową lekkiej architektury wielostrumieniowej rozszerzonej o moduły uwagi. 
+Eksperymenty przeprowadzono na zbiorze danych Cityscapes. Część teoretyczna obejmuje przegląd ograniczeń modeli czasu rzeczywistego oraz architektur referencyjnych. 
+W części praktycznej opisano implementację sieci, konfigurację środowiska testowego oraz ewaluację modelu FAscnn++. Analizie poddano kluczowe metryki jakości (mIoU, dokładność pikselowa) oraz wskaźniki przepustowości (FPS, opóźnienie inferencji).
+
+\textbf{Słowa kluczowe:} segmentacja semantyczna; FAscnn++; Cityscapes; architektury lekkie; czas rzeczywisty.
+
+\input{../rozdzialy/01_Wstep/wstep}
+\input{../rozdzialy/02_Problem_Badawczy/problem_badawczy}
+\input{../rozdzialy/03_Implementacja/implementacja}
+\input{../rozdzialy/04_Metodologia_Badan/metodologia_badan}
+\input{../rozdzialy/05_Wyniki_Eksperymentow/wyniki_eksperymentow}
+\input{../rozdzialy/06_Podsumowanie/podsumowanie}
+
+\printbibliography
+
+\appendix
+\chapter{Krzywe uczenia i wykresy szczegółowe metryk}
+Niniejszy dodatek zawiera krzywe uczenia oraz wykresy słupkowe dla badanych architektur. Wykresy przeniesiono z Rozdziału 5 w celu poprawy czytelności głównego tekstu pracy.
+
+\autoresultfigure{../cała_praca/figures_auto/plot_miou_fastscnn}
+{Krzywa uczenia mIoU dla modelu Fast-SCNN.}
+{fig:plot-miou-fastscnn}
+{0.85\linewidth}
+
+\autoresultfigure{../cała_praca/figures_auto/plot_loss_fastscnn}
+{Przebieg funkcji straty dla modelu Fast-SCNN.}
+{fig:plot-loss-fastscnn}
+{0.85\linewidth}
+
+\autoresultfigure{../cała_praca/figures_auto/bar_miou}
+{Porównanie metryki \textit{mIoU} dla modeli bazowych i wariantów FAscnn++.}
+{fig:bar-miou}
+{0.95\linewidth}
+
+\autoresultfigure{../cała_praca/figures_auto/bar_pixel_acc}
+{Porównanie dokładności pikselowej (\textit{Pixel Accuracy}) badanych modeli.}
+{fig:bar-pixel-acc}
+{0.95\linewidth}
+
+\autoresultfigure{../cała_praca/figures_auto/scatter_speed_vs_miou}
+{Zależność pomiędzy dokładnością \textit{mIoU} a przepustowością FPS.}
+{fig:scatter-speed-vs-miou}
+{0.88\linewidth}
+
+\autoresultfigure{../cała_praca/figures_auto/bar_cpu_fps}
+{Przepustowość inferencji na jednostce CPU.}
+{fig:bar-cpu-fps}
+{0.95\linewidth}
+
+\autoresultfigure{../cała_praca/figures_auto/bar_gpu_fps}
+{Przepustowość inferencji na układzie GPU.}
+{fig:bar-gpu-fps}
+{0.95\linewidth}
+
+\autoresultfigure{../cała_praca/figures_auto/latency_percentiles_cpu}
+{Rozkład opóźnień inferencji na jednostce CPU.}
+{fig:latency-percentiles-cpu}
+{0.95\linewidth}
+
+\autoresultfigure{../cała_praca/figures_auto/latency_percentiles_gpu}
+{Rozkład opóźnień inferencji na układzie GPU.}
+{fig:latency-percentiles-gpu}
+{0.95\linewidth}
+
+\chapter{Przykładowe wyniki segmentacji modelu FAscnn++ V18}
+Niniejszy dodatek prezentuje wizualizacje segmentacji wygenerowane przez model FAscnn++\_V18 na zbiorze Cityscapes. Przykłady ilustrują dokładność wyznaczania krawędzi, skuteczność detekcji klas małoobszarowych (sygnalizacja świetlna, piesi) oraz spójność predykcji na obszarach homogenicznych (droga, niebo).
+
+\begin{figure}[hbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{../cała_praca/figures_auto/seg_0.png}
+  \caption{Przykładowa segmentacja 1.}
+\end{figure}
+
+\begin{figure}[hbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{../cała_praca/figures_auto/seg_1.png}
+  \caption{Przykładowa segmentacja 2.}
+\end{figure}
+
+\begin{figure}[hbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{../cała_praca/figures_auto/seg_2.png}
+  \caption{Przykładowa segmentacja 3.}
+\end{figure}
+
+\begin{figure}[hbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{../cała_praca/figures_auto/seg_3.png}
+  \caption{Przykładowa segmentacja 4.}
+\end{figure}
+
+\end{document}

@@ -1,0 +1,2 @@
+model,event_file,train_loss_avg,val_miou,val_acc
+train_FAscnn_pp_V31,events.out.tfevents.1774886080.jan-ai.699806.0,1.4051374197006226,0.6221123337745667,0.9332992434501648

@@ -1,0 +1,9 @@
+bar_miou: results/plots/bar_miou.png
+bar_pixel_acc: results/plots/bar_pixel_acc.png
+bar_cpu_fps: results/plots/bar_cpu_fps.png
+bar_gpu_fps: results/plots/bar_gpu_fps.png
+bar_dataset_fps: results/plots/bar_dataset_fps.png
+scatter_speed_vs_miou: results/plots/scatter_speed_vs_miou.png
+heatmap_iou_per_class: results/plots/heatmap_iou_per_class.png
+latency_percentiles_cpu: results/plots/latency_percentiles_cpu.png
+latency_percentiles_gpu: results/plots/latency_percentiles_gpu.png

@@ -1,0 +1,24 @@
+# Licencja FAscnn_pp-fast-segmentation (Academic & Non-Commercial)
+
+Niniejsze oprogramowanie oraz wagi modelu (FAscnn_pp_V18) są udostępniane do celów naukowych, badawczych i edukacyjnych. 
+
+### 1. Dozwolony użytek (Academic Use)
+*   Wykorzystanie w ramach prac dyplomowych, publikacji naukowych i projektów non-profit.
+*   Modyfikacja kodu źródłowego na potrzeby własnych badań.
+*   Prezentowanie wyników predykcji modelu w publikacjach pod warunkiem podania autorstwa (patrz sekcja "Cytowanie").
+
+### 2. Ograniczenie komercyjne (Non-Commercial Use Only)
+*   Zabrania się wykorzystywania kodu, wag modelu (checkpointów) oraz architektury FAscnn_pp w celach zarobkowych bez uzyskania odrębnej zgody autora.
+*   Zakaz obejmuje w szczególności: integrację modelu z komercyjnymi systemami wizyjnymi, sprzedaż oprogramowania opartego na FAscnn_pp oraz świadczenie usług typu SaaS z wykorzystaniem modelu.
+*   W przypadku chęci wykorzystania komercyjnego, prosimy o kontakt z autorem w celu ustalenia odrębnych warunków licencyjnych.
+
+### 3. Redystrybucja
+*   Dalsze udostępnianie kodu lub wag modelu musi odbywać się na tych samych warunkach (ShareAlike) i z zachowaniem niniejszej informacji o licencji.
+
+### 4. Brak gwarancji
+*   Oprogramowanie jest dostarczane "takie, jakie jest" (As-Is), bez żadnych gwarancji dotyczących przydatności do określonych zadań, w tym bezpieczeństwa w realnych systemach autonomicznych.
+
+### 5. Cytowanie (Attribution)
+W przypadku wykorzystania projektu w pracy naukowej, należy zacytować go w następujący sposób:
+
+> [Jan Zakroczymski], "FAscnn_pp: Fast Atencion SCNN", Praca Licencjacka, [UKSW], 2026.

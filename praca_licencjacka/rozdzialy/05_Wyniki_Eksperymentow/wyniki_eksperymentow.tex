@@ -1,0 +1,204 @@
+\chapter{Wyniki eksperymentów}
+
+\newcommand{\autoresultfigure}[4]{
+  \IfFileExists{#1.png}{
+    \begin{figure}[htbp]
+      \centering
+      \includegraphics[width=#4]{#1}
+      \caption{#2}
+      \label{#3}
+    \end{figure}
+  }{
+    \IfFileExists{#1.pdf}{
+      \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=#4]{#1}
+        \caption{#2}
+        \label{#3}
+      \end{figure}
+    }{
+      \IfFileExists{#1.jpg}{
+        \begin{figure}[htbp]
+          \centering
+          \includegraphics[width=#4]{#1}
+          \caption{#2}
+          \label{#3}
+        \end{figure}
+      }{
+        \IfFileExists{#1.jpeg}{
+          \begin{figure}[htbp]
+            \centering
+            \includegraphics[width=#4]{#1}
+            \caption{#2}
+            \label{#3}
+          \end{figure}
+        }{}
+      }
+    }
+  }
+}
+
+\section{Sposób prezentacji wyników}
+Rozdział prezentuje dane eksperymentalne z wykorzystaniem tabel zbiorczych i wykresów. Wizualizacje pobierane są automatycznie z katalogu \texttt{results}. Zastosowano stabilne aliasy plików z \texttt{figures\_auto}, eliminując konieczność ręcznej aktualizacji ścieżek. Zestawiono wskaźniki jakości i wydajności modeli z ich przebiegiem treningowym, co umożliwia analizę stabilności konwergencji sieci. Wyniki w formacie tekstowym eksportowane są do \texttt{praca\_licencjacka/wyniki\_auto}.
+
+\section{Wyniki modeli bazowych}
+W sekcji zaprezentowano ewaluację modeli referencyjnych. Architekturą odniesienia dla projektowanego modelu jest sieć Fast-SCNN, charakteryzująca się optymalnym bilansem przepustowości i skuteczności segmentacji.
+
+\input{../rozdzialy/05_Wyniki_Eksperymentow/auto_metrics}
+
+\section{Wyniki kolejnych wariantów FAscnn++}
+Sekcja dokumentuje proces badawczy nad topologią FAscnn++ dla wariantów V17 i V18. Stanowią one docelowy etap fuzji lekkiej ścieżki splotowej z modułem predykcji uwagi w gałęzi kontekstowej.
+
+\subsection{Analiza modelu FAscnn++\_V18}
+Rozwiązaniem docelowym pracy jest model V18. Wdrożenie bloku \textit{Fast Attention} w torze analizy globalnej pozwala na utrzymanie celności segmentacji przy znacznej minimalizacji opóźnień inferencji (latency) na jednostkach brzegowych.
+
+\section{Badania ablacyjne i ewolucja architektury}
+Eksperymenty w fazie badań ablacyjnych (Tabela \ref{tab:ewolucja_do_v18}) wykonano przy skróconym harmonogramie 100 epok, w celu optymalizacji zasobów obliczeniowych. Uzyskana celność modelu bazowego (62,42\% mIoU) jest niższa niż w pełnym reżimie treningowym. Tabela obrazuje sumaryczny przyrost parametrów względem sieci Fast-SCNN.
+
+\begin{table}[htbp]
+\centering
+\caption{Ewolucja architektury sieci z wariantu Fast-SCNN do FAscnn++ V18 (rozdzielczość $1024 \times 2048$)}
+\label{tab:ewolucja_do_v18}
+\resizebox{\linewidth}{!}{
+\begin{tabular}{|l||c|c|c|c||c|c|}
+\hline
+\textbf{Model / Etap rozwoju} & \textbf{BiSeNetFFM} & \textbf{Fast Attention} & \textbf{Copy-Paste} & \textbf{Class Weights} & \textbf{mIoU (\%)} & \textbf{GPU FPS} \\ \hline\hline
+\textbf{FastSCNN (Baseline)}       & -- (Standard) & -- & -- & -- & 0,00 (bazowe) & 339,73 \\ \hline
+\textbf{+ Inna fuzja (BiSeNetFFM)} & \checkmark & -- & -- & -- & \underline{+1,03 p.p.} & \underline{351,93} \\ \hline
+\textbf{+ Fast Attention}    & \checkmark & \checkmark & -- & -- & \underline{+0,44 p.p.} & \underline{343,43} \\ \hline
+\textbf{+ Dodanie Copy-Paste}      & \checkmark & \checkmark & \checkmark & -- & \underline{+0,33 p.p.} & \underline{343,36} \\ \hline
+\textbf{+ Class Weights (Standard)} & \checkmark & \checkmark & \checkmark & \checkmark (Standard) & \underline{+0,96 p.p.} & \underline{343,98} \\ \hline
+\textbf{+ Manualny Boost Klas}     & \checkmark & \checkmark & \checkmark & \checkmark (Boost) & -0,17 p.p. & \underline{343,31} \\ \hline
+\end{tabular}
+}
+\end{table}
+
+\textbf{Obserwacje z procesów ablacyjnych:}
+\begin{itemize}
+    \item \textbf{Fuzja BiSeNetFFM:} Adaptacja łączenia bloków ze środowiska BiSeNet podniosła celność o +1,03 p.p., poprawiając wydajność obliczeniową funkcji łączącej mapy cech.
+    \item \textbf{Wdrożenie Fast Attention:} Włączenie mechanizmu uwagi do toru nielokalnego przyniosło przyrost mIoU o +0,44 p.p., obniżając minimalnie przepustowość GPU z około 350 FPS na 343 FPS.
+    \item \textbf{Zastosowanie Copy-Paste:} Wprowadzenie augmentacji na rzadkich obiektach poprawiło dokładność o kolejne +0,33 p.p. (dla treningu 100 epok).
+    \item \textbf{Modyfikacja wag klas (Class Weights):} W definicji funkcji straty zaadaptowano wagi wyrównujące częstotliwość występowania klas. Ręcznie zastosowano wagi wzmacniające ($\times 1,5$) dla klas o geometrii pionowej (\textit{Wall}, \textit{Fence}, \textit{Pole}). Parametr kar (\textit{penalty boost}) podniesiono dwukrotnie dla grup niebezpiecznych (\textit{Rider}, \textit{Motorcycle}), wymuszając wyższe kary za fałszywe odrzucenia (FN).
+\end{itemize}
+
+\section{Wpływ rozdzielczości obrazu na wyniki treningu i inferencji}
+Analizie poddano zależność metryk segmentacji od rozmiaru przestrzennego klatek wejściowych. Wyniki dla rozdzielczości natywnej ($1024 \times 2048$), zredukowanej ($512 \times 1024$) oraz kwadratowej ($512 \times 512$) zebrano w Tabeli \ref{tab:rozdzielczosci}.
+
+\begin{table}[htbp]
+\centering
+\caption{Porównanie parametrów ewaluacyjnych w zależności od rozdzielczości klatek}
+\label{tab:rozdzielczosci}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Rozdzielczość (H $\times$ W)} & \textbf{mIoU (\%)} & \textbf{FPS (GPU)} & \textbf{FPS (CPU)} & \textbf{GFLOPs} \\ \hline
+$1024 \times 2048$ (Full Res) & 69,46 & 339,37 & 1,82 & 14,29 \\ \hline
+$512 \times 1024$ (Half Res) & 59,31 & 625,18 & 10,27 & 3,57 \\ \hline
+$512 \times 512$ (Square) & 45,67 & 641,48 & 30,09 & 1,79 \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Analiza kompromisu pomiędzy jakością a szybkością inferencji}
+Obiektywna ewaluacja opóźnień sieci opiera się na analizie kompromisu pomiędzy celnością (mIoU) a wydajnością (FPS). W systemach o twardych obostrzeniach czasowych architektura minimalizująca narzut inferencyjny zyskuje przewagę decyzyjną. Zestawienia z wyodrębnieniem układów GPU i CPU stanowią kluczowe kryterium wyboru.
+
+\section{Analiza jakościowa segmentacji w obrębie klas}
+Walidacja sieci pod kątem systemów wbudowanych wymaga odrębnej analizy dla każdej klasy obiektowej (Tabela \ref{tab:miou_per_class_resolution}). Zestawienie weryfikuje wskaźniki \textit{IoU} na 19 kategoriach Cityscapes. Wyniki modeli \texttt{FastSCNN} i \texttt{FAscnn++\_V18} udokumentowano zarówno dla układów w rozdzielczości Full Res, jak i Half Res. Pozwala to wyznaczyć wpływ dekompresji na precyzję krawędzi obiektów wielkogabarytowych i małoobszarowych.
+
+\begin{table}[htbp]
+\centering
+\caption{Zestawienie indeksów detekcji \textit{IoU} (\%) poszczególnych klas w zależności od rozdzielczości klatki}
+\label{tab:miou_per_class_resolution}
+\resizebox{\linewidth}{!}{
+\begin{tabular}{|l||c|c||c|c|}
+\hline
+& \multicolumn{2}{c||}{\textbf{Full Res ($1024 \times 2048$)}} & \multicolumn{2}{c|}{\textbf{Half Res ($512 \times 1024$)}} \\ \cline{2-5}
+\textbf{Klasa semantyczna} & \textbf{FastSCNN} & \textbf{FAscnn++ V18} & \textbf{FastSCNN} & \textbf{FAscnn++ V18} \\ \hline\hline
+Road (Droga)                 & 97,64 & \underline{97,70} & 96,35 & 96,35 \\ \hline
+Sidewalk (Chodnik)           & 80,92 & \underline{81,76} & 72,91 & \underline{73,23} \\ \hline
+Building (Budynek)           & 90,64 & 90,53 & 86,54 & \underline{87,31} \\ \hline
+Wall (Ściana)                & 54,39 & 50,36 & 48,03 & 47,83 \\ \hline
+Fence (Ogrodzenie)           & 52,03 & \underline{52,71} & 44,89 & 42,75 \\ \hline
+Pole (Słup)                  & 52,85 & \underline{54,78} & 33,52 & \underline{39,30} \\ \hline
+Traffic Light (Sygnalizator) & 57,70 & \underline{58,93} & 33,42 & \underline{36,38} \\ \hline
+Traffic Sign (Znak drogowy)  & 68,18 & \underline{68,74} & 49,54 & \underline{53,43} \\ \hline
+Vegetation (Roślinność)      & 91,01 & 90,99 & 87,55 & \underline{88,00} \\ \hline
+Terrain (Teren)              & 55,61 & \underline{60,13} & 56,77 & 54,57 \\ \hline
+Sky (Niebo)                  & 94,24 & 94,19 & 91,16 & \underline{91,19} \\ \hline
+Person (Pieszy)              & 73,13 & \underline{73,31} & 59,36 & \underline{60,88} \\ \hline
+Rider (Osoba na pojeździe)   & 48,48 & 47,90 & 35,68 & \underline{36,01} \\ \hline
+Car (Samochód)               & 92,37 & 92,35 & 87,94 & \underline{88,15} \\ \hline
+Truck (Ciężarówka)           & 59,96 & \underline{69,24} & 62,61 & \underline{63,56} \\ \hline
+Bus (Autobus)                & 73,87 & \underline{74,98} & 60,61 & \underline{63,18} \\ \hline
+Train (Pociąg)               & 63,36 & \underline{69,08} & 41,14 & \underline{42,51} \\ \hline
+Motorcycle (Motocykl)        & 45,41 & \underline{48,34} & 25,08 & \underline{30,92} \\ \hline
+Bicycle (Rower)              & 67,99 & 66,89 & 53,83 & \underline{54,37} \\ \hline\hline
+\textbf{mIoU (Średnia)}      & \textbf{69,46} & \textbf{\underline{70,68}} & \textbf{59,31} & \textbf{\underline{60,52}} \\ \hline
+\end{tabular}
+}
+\end{table}
+
+\textbf{Analiza detekcji klasowych (Per-Class Analytics):}
+\begin{itemize}
+    \item \textbf{Częstotliwość obiektów rzadkich:} Implementacja mechanizmu Fast Attention i augmentacji Copy-Paste zauważalnie poprawia predykcję trudnych obiektów w porównaniu do sieci bazowej FastSCNN. Zanotowano przyrost precyzji dla: sygnalizatorów świetlnych (+1,23 p.p.), ciężarówek (+9,28 p.p.), pociągów (+5,72 p.p.) oraz motocykli (+2,93 p.p.). Ogranicza to wskaźnik fałszywych detekcji generowanych z tła globalnego.
+    \item \textbf{Skalowanie wielkości wejściowej:} Redukcja klatki o współczynnik 0,5 (format $512 \times 1024$) zmniejsza globalną celność mIoU modeli o 10 punktów procentowych. Niemniej sieć FAscnn++ minimalizuje spadki celności na obiektach drobnych, zyskując od ok. 3 p.p. do 4 p.p. przewagi nad referencyjnym FastSCNN w identyfikacji znaków drogowych na skompresowanych danych.
+    \item \textbf{Decyzyjność dla układów wspomagania (ADAS):} Wynik uśredniony ustabilizował 70,68\% mIoU przy zachowaniu doskonałej przepustowości w granicy 343 FPS. Model wykazuje marginalne zmiany nakładu kosztów dla wstrzykniętych w gałąź modułów \texttt{Fast Attention}, pozycjonując architekturę V18 jako wariant preferowany dla układów brzegowych nowej generacji.
+\end{itemize}
+
+\section{Porównanie z rozwiązaniami z literatury}
+Skuteczność środowiska modeli rodziny FAscnn++ oceniono w świetle referencyjnych sieci z zestawienia publikacji \textit{state-of-the-art} z domeny lekkich konwolucji. W Tabeli \ref{tab:architektury} przyjęto ujednolicone ramy procedur i ustandaryzowano analizę poprzez referencję do testów na kartach środowiska GPU.
+
+\begin{table}[htbp]
+\centering
+\caption{Porównanie modeli z wiodącymi rozwiązaniami splotowymi z grupy układów ultra-lekkich}
+\label{tab:architektury}
+\footnotesize 
+\setlength{\tabcolsep}{3pt} 
+\renewcommand{\arraystretch}{1.2}
+
+\begin{tabularx}{\textwidth}{|X|c|c|c|c|c|l|}
+\hline
+\textbf{Architektura sieciowa} & 
+\textbf{\begin{tabular}[c]{@{}c@{}}mIoU\\ (\%)\end{tabular}} & 
+\textbf{FPS} & 
+\textbf{\begin{tabular}[c]{@{}c@{}}Rozdz.\\ Wejśc.\end{tabular}} & 
+\textbf{\begin{tabular}[c]{@{}c@{}}Param.\\ (M)\end{tabular}} & 
+\textbf{\begin{tabular}[c]{@{}c@{}}GFL\\ OPs\end{tabular}} & 
+\textbf{Sprzęt} \\ \hline
+
+FAscnn++\_V18 (Prezentowany) & 70.68 & \underline{343.17} & $1024 \times 2048$ & 1.14 & 14.26 & RTX 5080 \\ \hline
+SegNet~\bibref{badrinarayanan2017segnet} & 56.10 & 74.90 & $360 \times 640$ & 29.50 & 652.50 & RTX 3090 \\ \hline
+ENet~\bibref{paszke2016enet} & 58.30 & 83.80 & $360 \times 640$ & 0.36 & 8.70 & RTX 3090 \\ \hline
+SQNet~\bibref{treml2016sqnet} & 59.80 & 18.70 & $1024 \times 2048$ & 16.30 & 288.20 & RTX 3090 \\ \hline
+ESPNet~\bibref{mehta2018espnet} & 60.30 & 292.00 & $512 \times 1024$ & 0.36 & 6.90 & RTX 3090 \\ \hline
+TopFormer-T~\bibref{zhang2022topformer} & 70.70 & $\sim$100.80 & $1024 \times 2048$ & 1.40 & $\sim$0.60 & RTX 3090 \\ \hline
+PP-LiteSeg-T1~\bibref{peng2022ppliteseg} & 72.00 & 219.40 & $512 \times 1024$ & $\sim$1.60 & -- & RTX 3090 \\ \hline
+MobileNetV3+LR-ASPP~\bibref{howard2019mobilenetv3} & $\sim$72.40 & -- & -- & 3.22 & 9.70 & Mobilne CPU \\ \hline
+BiSeNetV2~\bibref{yu2021bisenetv2} & 72.60 & 156.00 & $1024 \times 512$ & 4.0--18.0 & $\sim$21.00 & RTX 3090 / 1080 Ti \\ \hline
+STDC2-Seg50~\bibref{fan2021stdc} & 73.40 & 119.00 & $512 \times 1024$ & 16.10 & 59.60 & RTX 3090 \\ \hline
+LCNet3\_7~\bibref{shi2024lcnet} & 73.80 & 142.50 & $1024 \times 1024$ & 0.51 & 15.90 & RTX 3090 \\ \hline
+LCNet3\_11~\bibref{shi2024lcnet} & 75.80 & 117.00 & $1024 \times 1024$ & 0.74 & 19.60 & RTX 3090 \\ \hline
+SeaFormer-S~\bibref{wan2023seaformer} & 76.10 & $\sim$7.6 (M) & $1024 \times 2048$ & 4.00 & 8.00 & SD 865 \\ \hline
+AFFormer-T~\bibref{dong2023afformer} & 76.50 & 22.0 (V) & $1024 \times 2048$ & 1.60 & 23.00 & Tesla V100 \\ \hline
+ISANet~\bibref{li2025isanet} & 76.70 & 58.00 & $512 \times 1024$ & 1.37 & 12.60 & Titan XP \\ \hline
+DDRNet-23-slim~\bibref{hong2021ddrnet} & 77.40 & 155.80 & $1024 \times 2048$ & 5.70 & 36.40 & RTX 3090 \\ \hline
+PIDNet-S~\bibref{xu2023pidnet} & 78.60 & 99.40 & $1024 \times 2048$ & 7.60 & 23.79 & RTX 3090 \\ \hline
+\end{tabularx}
+\end{table}
+
+Wszystkie architektury sieci trenowano przy użyciu środowiska nałożonego na akcelerator NVIDIA RTX 5080. Niektóre z procedur walidacyjnych przeprowadzono na układzie NVIDIA RTX 3090. Zabieg ten pozwala na wiarygodne zestawienie pomiarów wydajnościowych z ewaluacją modeli zaczerpniętych z literatury technicznej.
+
+Zgodnie z podsumowaniem (Tabela \ref{tab:architektury}), modele klasyfikowane w rodzinie FAscnn++ prezentują wysoce wydajne rozwiązanie w obszarze lekkich sieci systemów decyzyjnych ADAS. Osiągany wariant sieci FAscnn++\_V18 celuje w parametr bliski 70,68\% mIoU z utrzymaniem analizy na niemodyfikowanej pełnej rozdzielczości $1024 \times 2048$, operując wagami wielkości poniżej 1,2 miliona parametrów. Stanowi to konkurencyjną modyfikację architektury oznaczanej jako Fast-SCNN. Wprowadzone bloki dają skok decyzyjny bez drastycznych strat w FPS jednostki GPU.
+
+Pomiary dla przepustowości wariantów modelu FAscnn++ oraz Fast-SCNN realizowano na procesorze \textbf{NVIDIA RTX 5080} (karta wykorzystująca technologię Blackwell). Profile opóźnień wyodrębniono przy korzystaniu ze środowiska PyTorch, odpalonego w bazowej funkcjonalności (z natywnym formatem operacji Eager Mode). Narzutu sprzętowego nie modelowano w zewnętrznych interfejsach; procedury wydajności FPS ustalano \textbf{ze ścisłym odrzuceniem wykorzystania kompilatorów z optymalizacji NVIDIA TensorRT}. Uniknięto wdrożenia fuzji statycznej na jądrach instrukcji CUDA, rezygnując ponadto z obniżania matryc domyślnych dla typów zmiennoprzecinkowych do struktur FP16 bądź kwantyzowanych rejestrów INT8 (użyto domyślnych trybów FP32).
+
+Utrzymanie pomiarów czasowych przy czystym wariancie instalacji standardowej środowiska PyTorch oddaje surowe i precyzyjne odczyty czystej ewolucji sieci i zjawisk zachodzących w ulepszonej topologii Fast-SCNN względem podobnych rozwiązań konwolucji z grupy BiSeNetV2. W dokumentowaniu projektów unikanie profilu przyspieszanego (jak u kompilatorów TensorRT) gwarantuje szczelność testową wolną od zewnętrznych szumów sterowniczych i manipulacji bloków akcelerujących, stanowiących fundament fałszowanej wysokiej wydajności sztucznych konstrukcji pokroju RAFNet.
+
+Modele architektury FAscnn++ notują spójny kompromis budżetowy z wykorzystaniem relacji operacyjnej dla rygorystycznego wskaźnika matematycznego FLOPs zestawionego bezpośrednio ze wskaźnikami mIoU. Odciążenie jednostki wejściowej poniżej 10 GFLOPs owocuje generowaniem stabilnych odczytów o przepustowości rzędu $>300$ FPS. Model wdrożeniowy FAscnn++ predysponuje te struktury analityczne dla fizycznie limitowanych architektur środowisk rygoru cieplnego modułów z wbudowanych IoT oraz sieci dla współczesnych zrobotyzowanych samochodów brzegowych.
+
+\section{Wnioski z przeprowadzonych eksperymentów}
+Zestawienie wynikowe z materiału doświadczalnego niesie za sobą wnioski o charakterze wdrożeniowym:
+\begin{itemize}
+  \item Standardowy system konwolucji Fast-SCNN zachował ugruntowaną pozycję dla modeli szybkiej analizy brzegowej. Pozycjonuje się on jako niezwykle silny układ, uzyskujący mIoU na progu 69,5\% z bezkonkurencyjnym tempem odczytów (339 FPS na nowoczesnych platformach).
+  \item Zrewidowana struktura \textbf{FAscnn++ V18} dostarcza realizację postulatów badawczych z ostatecznym celownikiem 70,68\% mIoU przy minimalnym zniekształceniu ułamka referencyjnej szybkości (powyżej 340 FPS), udowadniając celowość z wdrożenia do systemów natychmiastowego podejmowania zrutynizowanych reakcji (ADAS).
+  \item Eksperyment analityczny śledzący utratę wariancji ewaluuje mechanizm szybkiej uwagi \textit{Fast Attention} z użyciem kompensacji wariacyjnej (rozwiązań takich jak \textit{Copy-Paste} i modyfikacje ogona statystycznego) jako wnoszący zauważalne polepszenie globalnego zestrojenia detali scen miejskich.
+  \item Gwałtowne zaniki płynności mIoU, rzędu spadków celności o blisko 10 punktów procentowych z wymuszoną redukcją rozdzielczości (do podziałów klatkowych na układ wideo o wymiarach $512 \times 1024$ lub o budowie na $512 \times 512$), obnażają skrajne wyzwanie sprzętowe i wdrożeniowe. Utrzymanie zjawiskowych przepustowości granicznych rzędu blisko 600 klatek w mniejszych rozdzielczościach osłabia system detekcji obiektów skrajnych i mało powierzchniowych, co ogranicza wiarygodność procedur analizujących podłoże drogowe (segmentację).
+\end{itemize}

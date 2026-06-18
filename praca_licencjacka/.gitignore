@@ -1,0 +1,19 @@
+# LaTeX intermediate files
+*.aux
+*.dvi
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.lof
+*.lot
+*.run.xml
+# Editor temporary files
+*.swp
+*~
+.#*
+*.bcf

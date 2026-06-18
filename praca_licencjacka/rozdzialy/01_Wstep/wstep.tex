@@ -1,0 +1,13 @@
+\chapter{Wstęp}
+
+Semantyczna segmentacja obrazów jest kluczowym problemem w dziedzinie widzenia maszynowego \bibref{minaee2021image}. Klasyfikacja obiektów na poziomie pojedynczych pikseli umożliwia precyzyjną interpretację przestrzenną sceny. Ma to krytyczne znaczenie dla działania systemów ADAS \bibref{feng2020deep}, autonomicznych bezzałogowców \bibref{osco2021review} oraz robotyki mobilnej \bibref{garg2020semantics}.
+
+W zastosowaniach czasu rzeczywistego (np. autonomiczna nawigacja w scenach miejskich) modele wizyjne muszą rozpoznawać wiele złożonych klas (infrastruktura drogowa, piesi, pojazdy) z ułamkowym opóźnieniem. Głównym wyzwaniem projektowym w tym obszarze jest optymalizacja kompromisu pomiędzy dokładnością predykcji a narzutem obliczeniowym sieci splotowej.
+
+Głębokie modele segmentacyjne o wysokiej precyzji, takie jak SETR \bibref{zheng2021rethinking} czy Mask2Former \bibref{cheng2022masked}, charakteryzują się potężną złożonością matematyczną. Całkowicie dyskwalifikuje je to z bezpośrednich wdrożeń brzegowych (edge computing). Praktycznym rozwiązaniem są wysoce zoptymalizowane, lekkie architektury splotowe, w tym ENet \bibref{paszke2016enet} i Fast-SCNN \bibref{poudel2019fast}, ukierunkowane na drastyczną minimalizację liczby parametrów. Poprawa precyzji działania takich architektur, przy zachowaniu bezkompromisowej przepustowości, pozostaje w centrum aktualnych prac badawczych.
+
+Celem pracy jest projekt, oprogramowanie i rygorystyczna ewaluacja rozszerzeń dla architektury Fast-SCNN. Skonstruowano model FAscnn++, łączący strukturę wielostrumieniową z wydajnymi mechanizmami uwagi. Przygotowane rewizje sieci przetestowano i porównano analitycznie z modelami referencyjnymi na zbiorze Cityscapes \bibref{cordts2016cityscapes}.
+
+Hipoteza badawcza zakłada, że integracja modułów uwagi ze sprawdzoną topologią splotową w modelu FAscnn++ znacząco zwiększy metrykę dokładności (mIoU) względem innych modeli klasy lekkiej. Zostanie to osiągnięte przy utrzymaniu przepustowości klatek (FPS) kompatybilnej z systemami o reżimie czasu rzeczywistego. Poprawność tej tezy zweryfikowano wykorzystując ustrukturyzowany pakiet miar jakości (mIoU, Pixel Accuracy) oraz miar wydajności (FPS, latency, GFLOPs, liczba parametrów).
+
+Struktura dysertacji: Rozdział 2 formułuje wprost problem badawczy. Rozdział 3 dokumentuje autorską implementację programową. W rozdziale 4 sformalizowano metodologię i warunki środowiska testowego. Rozdział 5 to szczegółowa i analityczna ewaluacja uzyskanych wyników. Pracę zamyka wykaz kluczowych konkluzji (Rozdział 6).

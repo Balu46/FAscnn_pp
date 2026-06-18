@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: fascnn_pp-fast-segmentation
+Version: 0.1.0
+Summary: FAscnn_pp Fast Segmentation models and training pipeline
+Requires-Python: >=3.8

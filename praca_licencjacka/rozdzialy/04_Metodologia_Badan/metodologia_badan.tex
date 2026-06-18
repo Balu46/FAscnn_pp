@@ -1,0 +1,138 @@
+\chapter{Metodologia badań}
+
+\section{Cel badań i pytania badawcze}
+Głównym celem pracy jest implementacja i ewaluacja optymalizacji dla referencyjnej architektury Fast-SCNN. Wprowadzone ulepszenia (oznaczone jako model FAscnn++) dedykowane są systemom segmentacji semantycznej czasu rzeczywistego. Badania koncentrują się na maksymalizacji dokładności klasyfikacji (mIoU) przy jednoczesnym utrzymaniu wysokiej przepustowości (FPS) i niskiego opóźnienia inferencji (latency).
+
+W ramach eksperymentów zestawia się wydajność modeli z rodziny FAscnn++ z referencyjnymi architekturami ENet oraz Fast-SCNN, zachowując ujednolicone warunki uczenia i tożsame środowisko sprzętowe.
+
+Na podstawie analizy wyników sformułowano odpowiedzi na pytania badawcze:
+\begin{enumerate}
+    \item Czy wdrożenie zmodyfikowanej fuzji dwustrumieniowej w architekturze Fast-SCNN zwiększa precyzję segmentacji (mIoU) przy zachowaniu porównywalnego narzutu obliczeniowego?
+    \item W jakim stopniu mechanizm \texttt{FastAttention} zintegrowany ze ścieżką kontekstową przewyższa klasyczne moduły \textit{Global Average Pooling} w klasyfikacji obiektów o dużej wariancji skali?
+\end{enumerate}
+
+\section{Zbiór danych}
+Eksperymenty oparto na zbiorze \textit{Cityscapes Dataset} \bibref{cordts2016cityscapes}, stanowiącym standard w ewaluacji modeli wizyjnych dla systemów autonomicznych. Zbiór oferuje gęste adnotacje pikselowe obrazów zarejestrowanych w 50 miastach europejskich.
+
+\paragraph{Charakterystyka i struktura zbioru}
+Baza obejmuje 5000 obrazów w rozdzielczości $2048 \times 1024$ pikseli z precyzyjnymi maskami (\textit{fine annotations}). Zestaw podzielono na:
+\begin{itemize}
+    \item \textbf{Zbiór treningowy:} 2975 obrazów wykorzystywanych do optymalizacji wag sieci.
+    \item \textbf{Zbiór walidacyjny:} 500 obrazów do monitorowania metryki mIoU i strojenia hiperparametrów.
+    \item \textbf{Zbiór testowy:} 1525 obrazów z maskami niejawnymi, służących do końcowej ewaluacji po stronie serwera projektowego.
+\end{itemize}
+
+\paragraph{Klasyfikacja i trudności badawcze}
+Procedura ewaluacyjna wyodrębnia 19 klas krytycznych dla nawigacji w ruchu miejskim. Obejmują one kategorie infrastruktury drogowej (jezdnia, chodnik), uczestników ruchu (pieszy, rowerzysta), pojazdów (samochód, autobus) oraz elementów statycznych (budynek, ogrodzenie). 
+
+Głównym problemem analitycznym zestawu jest silne niezbalansowanie klas (\textit{class imbalance}). Dominują klasy tła (droga, niebo, budynki), natomiast obiekty takie jak motocykl czy sygnalizacja świetlna zajmują ułamkową powierzchnię kadrów. Wymusza to zastosowanie na etapie treningu technik kompensujących dominację długiego ogona, aby umożliwić modelowi ekstrakcję cech rzadkich obiektów bez obniżenia przepustowości FPS.
+
+\paragraph{Przetwarzanie i augmentacja danych}
+W celu poprawy generalizacji zaimplementowano strumieniowy potok augmentacji danych (\textit{on-the-fly}):
+\begin{itemize}
+    \item \textbf{Losowe skalowanie:} ze współczynnikiem w zakresie od 0,5 do 2,0 rozdzielczości bazowej.
+    \item \textbf{Przycinanie (Random Crop):} do docelowego formatu $1024 \times 2048$ pikseli (lub skompresowanego, zależnie od specyfikacji testu).
+    \item \textbf{Odbicie lustrzane:} horyzontalne (\textit{horizontal flip}) z prawdopodobieństwem 0,5.
+    \item \textbf{Augmentacja Copy-Paste:} algorytm niwelujący problem \textit{long tail}. System losowo wyodrębnia rzadkie klasy z obrazów dawców i implementuje je na tło docelowe. Operacja ta zwiększa ekspozycję mało reprezentowanych kategorii w procesie uczenia bez ingerencji w globalny kontekst.
+    \item \textbf{Normalizacja:} zgodna ze średnią wyliczoną dla zbioru ImageNet, przyspieszająca konwergencję gradientu.
+\end{itemize}
+W trybie inferencji modele ewaluowano na pełnych klatkach $2048 \times 1024$.
+
+\paragraph{Kryteria doboru klas do augmentacji Copy-Paste}
+Wyodrębnienie celów dla techniki Copy-Paste zrealizowano metodą ilościową (\textit{Data-Driven Copy-Paste}). Dla klasy $i$ wyznaczono metryki:
+\begin{enumerate}
+    \item \textbf{Globalne prawdopodobieństwo wystąpienia} ($P_{glob, i}$), definiujące udział pikseli klasy w zbiorze treningowym:
+    \begin{equation}
+        P_{glob, i} = \left( \frac{C_i}{T_{pixels}} \right) \cdot 100\%
+    \end{equation}
+    gdzie $C_i$ to suma pikseli klasy $i$, a $T_{pixels}$ oznacza łączną liczbę pikseli w zestawie uczącym.
+    
+    \item \textbf{Warunkowe pokrycie obrazu} ($A_{cond, i}$), szacujące powierzchnię zajmowaną przez obiekt przy jego wystąpieniu:
+    \begin{equation}
+        A_{cond, i} = \left( \frac{C_i / N_i}{P_{img}} \right) \cdot 100\%
+    \end{equation}
+    gdzie $N_i$ to liczba wystąpień obrazów z klasą $i$, a $P_{img}$ odpowiada liczbie pikseli na obraz.
+\end{enumerate}
+
+Procedurę zaaplikowano z ograniczeniem progowym: $P_{glob, i} < 1,0\%$ i $A_{cond, i} < 1,0\%$. Skutkuje to kwalifikacją wyłącznie obiektów rzadkich i małogabarytowych (światła, znaki, motocykle, rowery). Takie ujęcie zapobiega modyfikacjom przestrzennym ingerującym w topologię otoczenia ustrukturyzowanego.
+
+\section{Modele uwzględnione w eksperymentach}
+Ocenie poddano zbiór następujących wariantów sieci neuronowych:
+\begin{itemize}
+  \item architektury bazowe: Fast-SCNN, ENet (wraz ze skróconymi wariantami ENetv2, ENetv3),
+  \item cykl ewolucyjny środowiska FAscnn++,
+  \item docelowy model po przeprowadzeniu testów ablacyjnych (FAscnn++\_V18).
+\end{itemize}
+Wykorzystanie ENet oraz Fast-SCNN pozwala na standaryzowane, weryfikowalne zestawienie wydajności względem dotychczasowych rozwiązań brzegowych.
+
+\section{Warunki środowiska eksperymentalnego}
+Proces badawczy zrealizowano w ujednoliconym środowisku obliczeniowym. Wdrożono rygorystyczną standaryzację hiperparametrów treningowych w celu zapewnienia wiarygodności wahań celności przypisywanych cechom architektonicznym modeli.
+
+\paragraph{Parametry treningowe}
+Wszystkie sieci poddano optymalizacji przez 200 epok. Użyto optymalizatora SGD ze zmienną pędu (\textit{momentum}) ustaloną na 0,9 oraz parametrem spadku wag (\textit{weight decay}) równym $4 \times 10^{-5}$. Zaimplementowano politykę harmonogramu uczenia \textit{Poly Learning Rate}: $lr = lr_{base} \times (1 - \frac{iter}{max\_iter})^{power}$, przyjmując początkowy współczynnik uczenia $lr_{base} = 0,045$ oraz potęgę $power = 0,9$, wzorowaną na parametrach bazowych dla Fast-SCNN \bibref{poudel2019fastscnn}. 
+
+Paczka treningowa (\textit{batch size}) zawierała 6 obrazów. Dla architektur generujących wysoki zrzut z pamięci zaaplikowano mieszaną precyzję zmiennoprzecinkową (AMP). Wszystkie architektury trenowano na układzie NVIDIA RTX 5080. Niektóre testy przeprowadzono na układzie NVIDIA RTX 3090 dla obiektywnego porównania wydajności z innymi wynikami ze środowiska naukowego.
+
+\paragraph{Rozdzielczość wejściowa i augmentacje testowe}
+Obrazy wejściowe rzutowano dwuliniowo do rozdzielczości $1024 \times 2048$ pikseli i poddawano pre-procesowaniu obejmującemu normalizację (według współczynników bazy ImageNet). Modele ewaluowano również w niższych formatach ($512 \times 1024$, $512 \times 512$) na etapie analizy ablacyjnej.
+
+\paragraph{Ewaluacja wydajności inferencji}
+Czasy propagacji mierzono w izolowanych procesach ewaluacyjnych:
+\begin{itemize}
+    \item \textbf{Analiza na architekturze GPU}: Obciążenie $batch=1$ (\textit{paper-style latency}). Profilowanie realizowano na przestrzeni 200 iteracji, poprzedzonych blokiem 50 wywołań rozgrzewkowych (\textit{warmup}). Wykorzystano asynchroniczne zdarzenia w standardzie CUDA Events dla wykluczenia narzutu sterownika.
+    \item \textbf{Analiza na jednostce CPU}: Jednowątkowe środowisko egzekucyjne, poddane identycznej strukturze 20 cykli inicjujących oraz 200 ewaluacji czasowych.
+\end{itemize}
+
+\section{Miary oceny modeli}
+Analiza ilościowa oparta jest na formalizmie weryfikacyjnym dla klasycznych algorytmów \bibref{long2015fully, garcia2017review}. Zdefiniowano $p_{ij}$ jako klasyfikację rzutowaną z kategorii docelowej $i$ do etykiety $j$, a sumę prawdy bazowej jako $t_i = \sum_{j=1}^{k} p_{ij}$ z wariancją względem wektora klas $k$.
+
+\paragraph{Dokładność pikselowa (Pixel Accuracy, PA)}
+Odzwierciedla prosty stosunek poprawnych diagnoz rzutowany na łączną populację pikseli:
+$$\text{PA}=\frac{\sum_{i=1}^{k}p_{ii}}{\sum_{i=1}^{k}t_i}$$
+Skrajna podatność na niezbalansowanie i dominację tła narzuca dla PA charakter wyłącznie pomocniczy \bibref{garcia2017review}.
+
+\paragraph{Intersection over Union (IoU)}
+Miara wyizolowanego indeksu Jaccarda (IoU) dla określonej instancji $i$:
+$$\text{IoU}_i=\frac{p_{ii}}{t_i+\sum_{j=1}^{k}p_{ji}-p_{ii}}$$
+Uwzględnia sumę predykcji negatywnych i pozytywnych z kary za przestrzenie odrzucone \bibref{long2015fully}:
+$$\text{IoU}=\frac{TP}{TP+FP+FN}$$
+
+\paragraph{Średnie IoU (Mean IoU, mIoU)}
+Średnia wartość celności IoU zrzutowana arytmetycznie na sumaryczną liczbę obsługiwanych kategorii $k$:
+$$\text{mIoU}=\frac{1}{k}\sum_{i=1}^{k}\frac{p_{ii}}{t_i+\sum_{j=1}^{k}p_{ji}-p_{ii}}$$
+Taki model ewaluacji zapobiega marginalizacji znaczenia rzadszych klas i w pełni charakteryzuje siłę uogólnień dla modeli wielogałęziowych \bibref{garcia2017review}.
+
+\paragraph{Przepustowość (FPS) i opóźnienia inferencji}
+Narzut na sieć kwantyfikowany jest szybkością konwersji klatek obrazowych rzutowaną do jednej sekundy (FPS). Opóźnienia wyrażone w milisekundach wskazują graniczny próg zwłoki w decyzyjności (latency) – z perspektywy bezzałogowych technologii ADAS celowość obniżenia tych wartości kosztem minimalnej luki celności jest strukturalnie zalecana \bibref{yu2018bisenet}.
+
+\paragraph{Budżet obliczeniowy modeli}
+Środowiska uwarunkowane energetycznie (\textit{edge computing}) egzekwują wyliczanie niezbędnej w przestrzeni roboczej ilości GFLOPs. Waga modelu charakteryzowana jest łączną skalą optymalizowanych parametrów uczenia z przedrostkiem jednostkowym rzędu M (megabajt). Krytyczne granice to optymalizacja budżetu obliczeniowego przed redukcją struktury w dół \bibref{sandler2018mobilenetv2}.
+
+\section{Plan procesu badawczego}
+Badania postępowały według struktury iteracyjnej, modyfikując implementacje w ścisłych weryfikacjach przyrostu jakości rzutowanej względem utraty wydajności obliczeniowej z fuzji.
+
+\subsection{Etap 1: Inicjalizacja architektur referencyjnych}
+Udokumentowano wydajność i celność środowiska Fast-SCNN jako docelowe kryterium akceptacji (mIoU: 0,641, GPU FPS: 267). Zestawienie ENet i okrojonych wariantów ENetv2 i v3 obaliło zasadność ucinania pętli w strukturach sekwencyjnych – straty opóźnień redukują cechy brzegowe bez równoległych zysków ze wzrostu taktowania przy pełnych rozdzielczościach. Uwarunkowało to poszukiwania fuzji strumieniowej.
+
+\subsection{Etap 2: Ewolucja modelu FAscnn++}
+Ciąg badań w oparciu o ponad 30 kompilacji rzutował prace analityczne na 3 paradygmaty.
+
+\subsubsection{Faza 1: Rozdzielczość strumieni i bloki strukturalne ENet}
+Przetestowano struktury wielogałęziowe łączone za pomocą bloku wąskiego gardła (\textit{bottleneck}) po transformacji dylatacyjnej z ENet. Skutkiem była wysoka podatność na szumy przy trudnościach w konwergencji. Ustanowienie warstwy \texttt{PyramidPooling} w architekturze V13 udowodniło zysk przy analizie globalnej kosztem spowolnienia na rzędach fuzji, narzucając zaprzestanie optymalizacji tych gałęzi.
+
+\subsubsection{Faza 2: Strukturalna samouwaga klasyczna}
+Próba reparametryzacji z warstw splotowych do domeny Transformer. Zastosowanie \texttt{PatchEmbedConv} uwarunkowało konwersję map do systemu tokenów, rzutując wektor do klasycznych splotów w finalnej części obróbki i powodując silne interferencje artefaktów na osi krawędzi (mIoU rzędu 0,359) z załamaniem przepustowości wejściowych.
+
+\subsubsection{Faza 3: Fuzje dualne i Fast Attention (Modele V17--V18)}
+Stanowisko docelowe w projekcie wdrożyło paradygmat rozdziału torów z nałożonym obciążeniem na dekompozycję kontekstową we wczesnych kompresjach z \texttt{LearningToDownsampleV2}. Do fuzji odizolowanych cech zastosowano ujęcie inspirowane algorytmem BiSeNet. Osiągnięto optymalizację w granicach 300 FPS. Do dopełnienia celowości wdrożono optymalną iterację modelu (V18) z uwzględnionym na gałęzi wariacyjnej modułem szybkiej uwagi. Rozwiązanie to wywindowało parametry startowe na progi 0,655 mIoU.
+
+\subsection{Etap 3: Walidacje końcowe i śledzenie zmian (Ablation)}
+Etap optymalizacji parametrów brzegowych dla ulepszonego systemu udokumentował następujące zdarzenia analityczne:
+\begin{enumerate}
+    \item Mechanika \texttt{FastAttention} zredukowała dysonans jakościowy, dając przyrost celności o wartości 1,5--2\% kosztem znikomej degradacji zasobów.
+    \item Separowalne bloki fuzji \textit{DSConv} stanowią podwaliny niezbędne dla minimalizacji utraty szybkości przetwarzania FPS z pełnego kadru.
+    \item Reagowanie sprzężenia \textit{batch size} z mechanizmami normalizacji narzuca decydującą wibrację parametrów czasowych.
+\end{enumerate}
+
+\section{Zasady rzetelności eksperymentalnej}
+Zaostrzona procedura weryfikacji gwarantuje wdrożenie środowiskowe wolne od uwarunkowań platform lokalnych. Parametry zostały unormowane w rejestrach scentralizowanych po testach na identycznych pulach z jednolitym konfiguratorem hiperparametrów. Pomiary egzekwowano w zsynchronizowanym środowisku bez udziału symulatorów zewnętrznych. Obiekty zachowały izolowaną celność potwierdzaną przez rzutowanie rozkładu różnic do wartości rzędu statystycznie nieznacznych ($< 0,5\%$ mIoU przy uśrednianiu).

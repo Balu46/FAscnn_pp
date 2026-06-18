@@ -1,0 +1,17 @@
+pyproject.toml
+src/data/__init__.py
+src/data/data.py
+src/data/data_download.py
+src/fascnn_pp_fast_segmentation.egg-info/PKG-INFO
+src/fascnn_pp_fast_segmentation.egg-info/SOURCES.txt
+src/fascnn_pp_fast_segmentation.egg-info/dependency_links.txt
+src/fascnn_pp_fast_segmentation.egg-info/top_level.txt
+src/model_architecture/__init__.py
+src/model_architecture/model_ENET.py
+src/model_architecture/model_ENET_plus.py
+src/model_architecture/model_FAscnn_pp.py
+src/model_architecture/model_FAST_SCNN.py
+src/utils/__init__.py
+src/utils/test.py
+src/utils/traning.py
+src/utils/utils.py

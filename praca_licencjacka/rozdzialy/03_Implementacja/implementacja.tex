@@ -1,0 +1,73 @@
+\chapter{Implementacja}
+
+\section{Architektura systemu i struktura projektu}
+Zaprojektowany system posiada strukturę modularną, co ułatwia integrację nowych modeli i modyfikację parametrów treningowych bez ingerencji w rdzeń aplikacji. Drzewo katalogów odzwierciedla podział na moduły logiczne:
+\begin{itemize}
+    \item \texttt{src/data/} – definicje zbiorów danych (m.in. \texttt{Cityscape.py}) oraz logika transformacji i augmentacji.
+    \item \texttt{src/model\_architecture/} – moduł sieci neuronowych. Podkatalog \texttt{FAscnn++/} grupuje warianty architektoniczne (od V1 do V31). Plik \texttt{model\_factory.py} dostarcza klasę \texttt{ModelBuilder} opartą na wzorcu projektowym fabryki.
+    \item \texttt{src/utils/} – komponenty pętli treningowej (\texttt{train.py}), procedury ewaluacyjne (\texttt{test.py}), implementacje funkcji strat (\texttt{loss.py}) oraz kalkulatory metryk (\texttt{metrics.py}).
+    \item \texttt{src/\_\_main\_\_.py} – główny punkt wejścia aplikacji (CLI), integrujący moduły i parsujący konfigurację.
+    \item \texttt{visualisation/} – zbiór skryptów generujących wizualizacje predykcji oraz wykresy ewaluacyjne.
+\end{itemize}
+
+\section{Technologie i wymagania systemowe}
+Aplikację zaimplementowano w języku Python \bibref{van1995python} (wersja $\ge$ 3.8). Silnikiem obliczeniowym dla sieci neuronowych jest biblioteka PyTorch \bibref{paszke2019pytorch} (wersja 2.1), gwarantująca akcelerację sprzętową GPU poprzez biblioteki CUDA.
+
+Kluczowe zależności środowiskowe obejmują:
+\begin{itemize}
+    \item \texttt{torch} (2.10.0) – framework obliczeniowy operujący na tensorach.
+    \item \texttt{numpy} (2.4.1) – wysokowydajne operacje macierzowe.
+    \item \texttt{matplotlib} (3.10.8) – silnik wizualizacji danych.
+    \item \texttt{PyYAML} (6.0.3) – parser plików konfiguracyjnych.
+    \item \texttt{einops} (0.8.2) – elastyczne operacje tensorowe, wykorzystywane w implementacji mechanizmów uwagi.
+    \item \texttt{tqdm} (4.67.1) – wskaźniki postępu dla CLI.
+    \item \texttt{tensorboard} (2.20.0) – platforma logowania metryk treningowych.
+\end{itemize}
+
+\section{Opis kluczowych komponentów}
+
+\subsection{Moduł danych i augmentacja}
+Klasa \texttt{CityscapesDataModule} (\texttt{src/data/Cityscape.py}) implementuje potok ładowania zestawu Cityscapes. Do jej zadań należą:
+\begin{itemize}
+    \item mapowanie identyfikatorów zbioru źródłowego na 19 klas treningowych,
+    \item augmentacja strumieniowa (ang. \textit{on-the-fly}): losowe skalowanie, przycinanie (\textit{random crop}), lustrzane odbicia horyzontalne (\textit{horizontal flip}) i modyfikacje jasności,
+    \item transformacja do formatu tensora i normalizacja wejścia w oparciu o statystyki bazy ImageNet.
+\end{itemize}
+
+\subsection{Fabryka modeli – ModelBuilder}
+Klasa \texttt{ModelBuilder} (\texttt{src/model\_architecture/model\_factory.py}) odpowiada za instancjonowanie architektur sieci. Abstrakcja ta obsługuje modele referencyjne (ENet \bibref{paszke2016enet}, Fast-SCNN \bibref{poudel2019fastscnn}) oraz wszystkie warianty rodziny FAscnn++. Instancjonowanie konkretnej topologii wymaga jedynie modyfikacji odpowiedniego parametru w pliku konfiguracyjnym.
+
+\subsection{Pętla treningowa i ewaluacja}
+Funkcja \texttt{train\_main} (\texttt{src/utils/train.py}) obsługuje cykl życia procesu uczenia:
+\begin{itemize}
+    \item alokację optymalizatora (SGD z parametrem \textit{momentum}) i harmonogramu współczynnika uczenia (\texttt{PolyLR}),
+    \item akcelerację obliczeń dzięki zastosowaniu mieszanej precyzji zmiennoprzecinkowej (AMP – \textit{Automatic Mixed Precision}),
+    \item synchronizację z platformą TensorBoard w celu logowania przebiegu funkcji straty oraz metryk mIoU i Pixel Accuracy,
+    \item automatyczną serializację punktów kontrolnych modelu (wagi \textit{best.pt} i \textit{last.pt}).
+\end{itemize}
+
+\section{Konfiguracja i automatyzacja eksperymentów}
+Zarządzanie parametrami eksperymentów realizowane jest za pośrednictwem pliku \texttt{config.yaml}, co zapewnia reprodukowalność procedur ewaluacyjnych. Struktura konfiguracji dzieli się na sekcje:
+\begin{itemize}
+    \item \texttt{training}: hiperparametry optymalizacyjne (LR, batch size, liczba epok), definicje ścieżek dostępu i warianty augmentacji.
+    \item \texttt{test}: rozdzielczość wejściowa dla ewaluacji i liczba generowanych wizualizacji.
+    \item \texttt{model}: deskryptor wybranej topologii sieci oraz liczba obsługiwanych klas.
+    \item \texttt{patch}: parametry opcjonalnego kafelkowania klatek (ang. \textit{patching}).
+\end{itemize}
+
+Przygotowano również zbiór skryptów powłoki (\texttt{.sh}) automatyzujących rutynowe procesy:
+\begin{itemize}
+    \item \texttt{setup.sh} – budowa środowiska wirtualnego (\textit{venv}) i instalacja bibliotek.
+    \item \texttt{run\_train.sh} – inicjalizacja potoku treningowego z domyślną parametryzacją.
+    \item \texttt{run\_test.sh} – egzekucja walidacji skuteczności modelu na dedykowanym zbiorze danych.
+\end{itemize}
+
+\section{Interfejs użytkownika (CLI)}
+Aplikacja udostępnia interfejs wiersza poleceń (CLI), pozwalający na nadpisywanie parametrów środowiskowych. Przykłady wywołań:
+\begin{itemize}
+    \item \textbf{Trenowanie modelu:} \\
+    \texttt{python -m src train --config config.yaml --model FAscnn++\_V13 --batch-size 8}
+    \item \textbf{Testowanie i ewaluacja:} \\
+    \texttt{python -m src test --config config.yaml --model FAscnn++\_V13}
+\end{itemize}
+Wykorzystanie biblioteki \texttt{argparse} umożliwia nadpisywanie wartości parametrów z pliku YAML bezpośrednio w argumentach wywołania, co znacznie usprawnia proces optymalizacji hiperparametrów.

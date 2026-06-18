@@ -1,0 +1,37 @@
+\chapter{Podsumowanie}
+
+\section{Stopień realizacji celu pracy}
+Celem badawczym pracy była kompleksowa optymalizacja sieci neuronowej Fast-SCNN i rozwój układu FAscnn++ (Fast Attention SCNN), dedykowanego semantycznej segmentacji obrazów w czasie rzeczywistym. Założenia projektowe i inżynierskie zostały zrealizowane w całości.
+
+Skonstruowano modularne środowisko badawcze w oparciu o framework PyTorch, gwarantujące elastyczne prototypowanie konfiguracji architektonicznych. Zaimplementowano dedykowany potok przetwarzania danych na potrzeby zbioru Cityscapes, obsługujący strumień w natywnej rozdzielczości $1024 \times 2048$ pikseli. Iteracyjny proces R\&D objął projekt i walidację osiemnastu wariantów topologii (od V1 do V18), umożliwiając empiryczną ocenę poszczególnych węzłów strukturalnych. Ostateczne układy FAscnn++ ewaluowano z zastosowaniem rygorystycznych kryteriów, rzutując je na wskaźniki referencyjnych architektur Fast-SCNN oraz ENet, co potwierdziło w sposób obiektywny ich celność i narzut obliczeniowy.
+
+\section{Weryfikacja hipotezy badawczej}
+Hipoteza założycielska definiowała, że wielogałęziowa architektura uzbrojona w lekkie mechanizmy uwagi dostarczy dokładności predykcji równej bądź przewyższającej modele klasy \textit{ultra-lightweight}, przy bezwzględnym utrzymaniu obciążenia czasowego dopuszczalnego w systemach ADAS.
+
+Zarejestrowane statystyki walidacyjne finalnej instancji (FAscnn++\_V18) stanowczo potwierdzają wysuniętą tezę. Baza referencyjna (Fast-SCNN) notowała parametr 69,46\% mIoU ze zdolnością przetwarzania na poziomie 339,37 FPS dla operacji GPU. Nowoprojektowany wariant FAscnn++\_V18 wykazał poprawę jakości do wartości 70,68\% mIoU przy minimalnej korekcie przepustowości, uzyskując wynik 343,17 FPS. Udowodniono zatem, że autorskie moduły wykraczają celnością ponad odczyty modelu referencyjnego na surowym buforze rzędu jedynie 14,26 GFLOPs. Czyni to układ pożądanym wariantem dla sprzętowych platform Edge AI.
+
+\section{Najważniejsze osiągnięcia pracy}
+Podstawowe rezultaty badawczo-rozwojowe obejmują:
+\begin{itemize}
+    \item \textbf{Wdrożenie kompletnego środowiska eksperymentalnego:} uruchomienie zautomatyzowanego potoku uczącego (trening, walidacja i wizualizacja logów poprzez integrację TensorBoard).
+    \item \textbf{Ewolucja splotowa matrycy FAscnn++:} wdrożenie, testowanie i dokumentacja 18 wersji deweloperskich. Uargumentowane zarzucenie ślepych ścieżek redundancji konwolucyjnej (pełna tokenizacja) na korzyść wysokowydajnej fuzji rodem z układu BiSeNet wspartego modułem predykcji uwagi Fast Attention.
+    \item \textbf{Przesunięcie frontu Pareto (jakość/szybkość):} empiryczny dowód poprawy odczytów dla ulepszonego Fast-SCNN bez utraty przepustowości narzucającej bezpowrotną kompresję rozdzielczości sygnału wejściowego.
+    \item \textbf{Realizacja testów ablacyjnych:} szczegółowa izolacja analityczna dla nałożonych modułów z dowodem wkładu dla modułu uwagi szacowanym na przyrost celności w marginesie 1,0--1,5\% mIoU połączonym z tolerowalną, symboliczną opłatą ze skoku czasowego (latency delay).
+\end{itemize}
+
+\section{Ograniczenia warsztatu projektowego}
+Osiągnięcie docelowych metryk uwarunkowane było problemami analitycznymi w cyklu wdrożeniowym:
+\begin{itemize}
+    \item \textbf{Koszty cykli maszynowych i budżetu TFLOPs:} narzucenie obciążenia natywnym potokiem o wymiarach $1024 \times 2048$ doprowadziło do znacznego pochłaniania zasobów. Każdorazowy proces treningowy z optymalizatorem rzędu 200 epok generował utratę wielu godzin z bufora karty RTX 5080. Zablokowało to wykonanie rutynowego procesu dla maszynowego strojenia siatki parametrów (Grid Search).
+    \item \textbf{Asymetria balansu paczki (Class Imbalance):} zestaw miejski Cityscapes narzuca dominujący procent tła. Skutkowało to zjawiskami degradacyjnej ekstrakcji mniejszych stref (pociąg, motocykl), uniemożliwiając stabilizację wag gradientu na początkowym etapie prac dla koncepcji prototypów z drugiej fali (V14--V16).
+    \item \textbf{Ograniczenia powtórzeń testowych (Seed Runs):} surowy reżim energetyczny podyktował konieczność wymuszenia uśrednienia po marginesie błędu początkowego losowania dla wariantów ściśle oznaczonych do ewaluacji ostatecznej (V18).
+\end{itemize}
+
+\section{Kierunki dalszych prac}
+Architektura wariantu FAscnn++ wyznacza obiecujące wektory na poczet przyszłego rozwoju i wdrażania technologicznego:
+\begin{itemize}
+    \item \textbf{Testy kwantyzacyjne formatu Edge:} optymalizacja środowiska matryc z narzutem wektorowym rzędu INT8 w obszarze środowisk kompilujących NVIDIA TensorRT czy OpenVINO, uwzględniając montaż natywny dla urządzeń typu SoM w robotyce mobilnej.
+    \item \textbf{Rozbudowa zaplecza uogólnień (Generalization Testing):} przetrenowanie grafów wagowych z dodaniem pakietów rzutowania na odmienne rozkłady drogowe w projektach referencyjnych dla autonomii ruchu drogowego (Mapillary Vistas, BDD100K).
+    \item \textbf{Refaktoring na sprzęt mikrokontrolerów CPU:} implementacja rekonfiguracji rzędu sprzętowego ukierunkowująca moduł na jednostki skromne pozbawione asyst technologii Tensor Cores w logice układu GPU dla mikrorobotyki halowej.
+    \item \textbf{Mechanika sekwencyjna (Temporal Context):} dodanie strumienia buforującego z wymiarami ułożenia czasowo-przestrzennego predykcji co ma potencjał stabilizować krawędzie brzegowe przy analizie wideo z znikomym nakładem doliczanych obciążeń GFLOPs.
+\end{itemize}

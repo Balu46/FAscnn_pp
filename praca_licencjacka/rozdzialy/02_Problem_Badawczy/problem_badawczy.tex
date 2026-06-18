@@ -1,0 +1,100 @@
+\chapter{Przedstawienie problemu badawczego}
+
+\section{Definicja problemu}
+Problem badawczy dotyczy semantycznej segmentacji scen miejskich w czasie rzeczywistym. Zadanie polega na przypisaniu każdemu pikselowi obrazu o wymiarach $H \times W$ etykiety klasy semantycznej. Kluczowym aspektem pracy jest optymalizacja kompromisu pomiędzy dokładnością predykcji a narzutem obliczeniowym. Szybkość wnioskowania determinuje użyteczność modelu w systemach takich jak ADAS czy robotyka mobilna. Wysoka przepustowość (FPS) umożliwia szybszą nawigację i krótszy czas reakcji na przeszkody.
+
+\section{Znaczenie ograniczeń wydajnościowych}
+Wiele współczesnych modeli segmentacji osiąga wysoką dokładność kosztem dużej liczby parametrów, obciążenia pamięci oraz długiego czasu inferencji. Ogranicza to ich wdrożenie na platformach brzegowych (Edge AI). Z tego względu ewaluacja obejmuje zarówno jakość predykcji, jak i opóźnienie (latency). W zastosowaniach takich jak ADAS, bezzałogowce i robotyka, opóźnienie stanowi parametr krytyczny. Standardy inżynierskie często definiują czas rzeczywisty jako przepustowość powyżej 30 FPS \bibref{elhassan2024real}. W aplikacjach wymagających dynamicznej pętli sprzężenia zwrotnego (np. \textit{visual servoing}) celuje się w 60 Hz \bibref{corke1989videorate}. Wymagania te zależą ściśle od użytego sprzętu i dynamiki otoczenia.
+
+\section{Podstawy teoretyczne}
+
+\subsection{Sieci konwolucyjne}
+Podstawowym modułem w modelach wizyjnych są konwolucyjne sieci neuronowe (CNN), zbudowane z warstw splotowych i nieliniowych aktywacji. W niniejszej pracy analizowane są wyłącznie warianty architektur splotowych optymalizowane pod kątem wysokiej wydajności.
+
+\subsection{Zaawansowane bloki architektoniczne}
+Optymalizacja architektur CNN wymaga modyfikacji strukturalnych, z których kluczowe to konwolucje separowalne, bloki typu \textit{bottleneck} oraz przetwarzanie wieloskalowe.
+
+\paragraph{Konwolucje separowalne (Depthwise Separable Convolutions)}
+Tradycyjny splot (jądro $D_K \times D_K$, $M$ kanałów wejściowych, $N$ wyjściowych, rozdzielczość mapy $D_F \times D_F$) wiąże się z kosztem obliczeniowym:
+$$ C_{std} = D_K \cdot D_K \cdot M \cdot N \cdot D_F \cdot D_F $$
+Konwolucja separowalna \bibref{howard2017mobilenets, chollet2017xception} rozdziela tę operację na splot przestrzenny (\textit{depthwise}) i punktowy (\textit{pointwise}). Koszt wynosi wówczas:
+$$ C_{sep} = D_K \cdot D_K \cdot M \cdot D_F \cdot D_F + M \cdot N \cdot D_F \cdot D_F $$
+Mechanizm ten drastycznie kompresuje model, osiągając współczynnik redukcji operacji równy $\frac{1}{N} + \frac{1}{D_K^2}$.
+
+\paragraph{Moduły wąskiego gardła (\textit{Bottleneck})}
+W sieciach takich jak ResNet \bibref{he2016deep} moduły wąskiego gardła zapobiegają eksplozji parametrów w głębokich warstwach. Dane $x \in \mathbb{R}^{H \times W \times C}$ podlegają rzutowaniu do niższej wymiarowości (kompresja), splotowi przestrzennemu, a następnie ekspansji kanałowej:
+$$ F(x) = W_{1\times1}^{out} * \sigma\left( W_{3\times3} * \sigma\left( W_{1\times1}^{in} * x \right) \right) $$
+Liczba kanałów filtru $W_{1\times1}^{in}$ jest znacznie mniejsza niż $C$, co pozwala na oszczędność pamięci i mocy obliczeniowej.
+
+\subsubsection{Mechanizmy uwagi i ich koszt obliczeniowy}
+W konwencjonalnych sieciach CNN wagi filtrów są statyczne niezależnie od lokalizacji. Mechanizmy uwagi (\textit{attention}) umożliwiają dynamiczne ważenie cech, wzmacniając zdolności reprezentacyjne sieci przy minimalnym pogłębianiu architektury.
+
+\paragraph{Uwaga kanałowa i przestrzenna}
+Moduł \textit{Squeeze-and-Excitation} (SE) wdrożony w sieciach SENet \bibref{hu2018squeeze} agreguje informację przestrzenną poprzez \textit{Global Average Pooling}. Wynik przetwarzany jest przez dwuwarstwowy perceptron (MLP), generując wektor wag $\alpha \in \mathbb{R}^C$. Kanały macierzy cech $X$ są następnie skalowane:
+$$ X'_{c} = \alpha_c \cdot X_c $$
+Moduł CBAM \bibref{woo2018cbam} rozszerza to rozwiązanie, aplikując sekwencyjnie uwagę kanałową oraz przestrzenną. Koszt tych mechanizmów to ułamek procenta całkowitej wartości GFLOPs modelu.
+
+\subsection{Samouwaga (Self-Attention) i bloki nielokalne}
+Koncepcja architektury Transformer \bibref{vaswani2017attention} została przeniesiona do sieci CNN w formie bloków nielokalnych (\textit{Non-local Neural Networks}) \bibref{wang2018nonlocal}. Dla wektora wejściowego rzutowanego na macierze zapytań ($Q$), kluczy ($K$) i wartości ($V$), operacja atencji oblicza wagowaną sumę:
+$$ \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V $$
+gdzie $d_k$ to współczynnik skalujący.
+
+\paragraph{Złożoność obliczeniowa samouwagi}
+Złożoność klasycznej samouwagi zależy od rozdzielczości obrazu. Dla mapy cech o liczbie pikseli $N = H \times W$ i wymiarze $C$, obliczenie macierzy podobieństwa $QK^T$ wymaga $\mathcal{O}(N^2 C)$ operacji. Całkowita złożoność wynosi \bibref{dosovitskiy2020image}:
+$$ \mathcal{O}(N^2 C) = \mathcal{O}(H^2 \cdot W^2 \cdot C) $$
+Zależność kwadratowa od rozdzielczości wyklucza zastosowanie tego mechanizmu na wczesnych etapach sieci (duże $H$ i $W$). Narzędzie to stosuje się po wstępnej redukcji cech lub z wykorzystaniem uwagi lokalnej (np. Swin Transformer \bibref{liu2021swin}).
+
+\paragraph{Mechanizmy uwagi w segmentacji}
+Uwaga globalna poprawia dokładność segmentacji poprzez modelowanie rozległego kontekstu sceny \bibref{hu2020fastattention}. Ograniczeniem pozostaje operacja Softmax z kwadratową złożonością przestrzenną $\mathcal{O}(n^2c)$ (gdzie $n = H \times W$) \bibref{hu2020fastattention}. Blokuje to implementację klasycznej atencji w systemach czasu rzeczywistego, dla których analiza pełnej klatki wideo jest konieczna.
+
+\paragraph{Rozwiązania dla ograniczeń sprzętowych}
+Skuteczną alternatywą jest mechanizm szybkiej uwagi (\textit{Fast Attention}) \bibref{hu2020fastattention}. Eliminacja normalizacji Softmax na rzecz miary podobieństwa kosinusowego pozwala na rearanżację kolejności mnożenia macierzy. Złożoność operacji maleje do wymiaru liniowego $\mathcal{O}(nc^2)$ \bibref{hu2020fastattention}. W zadaniach wizyjnych ($n \gg c$) mechanizm ten ekstrahuje nielokalny kontekst przy ułamkowym koszcie względem klasycznej atencji.
+
+\subsection{Segmentacja semantyczna, panoptyczna i instancyjna}
+Wizja komputerowa wyróżnia segmentację semantyczną (klasyfikacja pikseli) \bibref{long2015fully}, instancyjną (identyfikacja odrębnych obiektów) \bibref{he2017mask} oraz panoptyczną (połączenie obu metod) \bibref{kirillov2019panoptic}. Praca koncentruje się na segmentacji semantycznej, dostarczającej ogólnego opisu sceny, wymaganego do autonomicznej nawigacji w reżimie niskich opóźnień inferencji.
+
+\subsection{Klasyczne modele segmentacji}
+Pionierskim rozwiązaniem w dziedzinie są sieci FCN \bibref{long2015fully}. Inne klasyczne struktury, jak U-Net \bibref{ronneberger2015u}, SegNet \bibref{badrinarayanan2017segnet}, DeepLab \bibref{chen2018deeplab} oraz PSPNet \bibref{zhao2017pspnet}, osiągają dużą celność. Z uwagi na wysokie zapotrzebowanie na GFLOPs są nieużyteczne na platformach brzegowych. Ich dedykowanym zamiennikiem dla systemów mobilnych stała się sieć ICNet \bibref{zhao2018icnet}.
+
+\subsection{Typy architektur}
+
+\paragraph{Enkoder-dekoder}
+Architektury sekwencyjne (np. U-Net \bibref{ronneberger2015u}) realizują rekonstrukcję z użyciem połączeń omijających (\textit{skip connections}). Koszt obliczeniowy wymusza ich odrzucenie z aplikacji czasu rzeczywistego.
+
+\paragraph{Wielogałęziowe i wielorozdzielcze}
+Systemy w rodzaju ICNet \bibref{zhao2018icnet} czy Lite-HRNet \bibref{yu2021lite} przetwarzają obraz równolegle w wielu rozdzielczościach. Ekstrakcja kontekstu odbywa się na silnie skompresowanych mapach, a odtwarzanie detali na płytkich warstwach o szerokiej przestrzeni.
+
+\paragraph{Dwuścieżkowe i wielościeżkowe}
+Modele brzegowe opierają się na dekompozycji przetwarzania. Sieć BiSeNet \bibref{yu2018bisenet, yu2021bisenetv2} rozdziela ścieżkę przestrzenną i kontekstową. Konstrukcje DDRNet \bibref{hong2021deep} oraz PIDNet \bibref{xu2023pidnet} rozbudowują tę ideę o gęstą fuzję sygnału. Takie ujęcie stanowi architektoniczny fundament proponowanego modelu FAscnn++.
+
+\section{Przegląd architektur efektywnych i mechanizmów uwagi}
+
+\paragraph{Pierwsza generacja i podejścia wieloskalowe}
+Wczesne modele (ENet \bibref{paszke2016enet}, ESPNetv2 \bibref{mehta2019espnetv2}) optymalizowały obciążenie sprzętowe kompresując kanały i aplikując asymetryczne sploty. Kosztem była utrata detali. Architektura Fast-SCNN \bibref{poudel2019fastscnn} z wbudowanym modułem kaskadowym (\textit{Learning to Downsample}) ustaliła standard wydajności (123 FPS) w formacie $1024 \times 2048$. Fast-SCNN służy jako główny punkt referencyjny niniejszej pracy.
+
+\paragraph{Nowoczesne architektury wielościeżkowe}
+Współczesne sieci SOTA odseparowują ścieżkę detali od kontekstu (BiSeNetV2, STDC2). DDRNet-23-slim pozwala na 77,4\% mIoU przy 102 FPS. Architektura PIDNet-S notuje 78,6\% mIoU (93,2 FPS). Ich implementacja dla urządzeń o ścisłym reżimie energetycznym pozostaje niemożliwa. Nowsze modele ograniczają opóźnienia poprzez skracanie dekoderów (PP-LiteSeg-T). Model LCNet3\_7 redukuje wielkość do 0,51 miliona parametrów zachowując 73,8\% mIoU. Układ ISANet podnosi mIoU do 76,7\% (1,37 M parametrów). Nowatorska sieć GCNet poprzez reparametryzację uzyskuje 77,3\% mIoU i rekordowe 193,3 FPS w natywnej rozdzielczości $1024 \times 2048$.
+
+\paragraph{Transformery wizyjne, szybka uwaga (Fast Attention) i modele hybrydowe}
+Transformery wizyjne redukują operacje uwagi wykorzystując warianty strukturalne: EfficientViT \bibref{liu2023efficientvit}, TopFormer-T, SeaFormer-S/T oraz systemy hybrydowe (MobileViT \bibref{mehta2022mobilevit}). Sieć LMIINet łączy splot i atencję, zapewniając 72,0\% mIoU na zaledwie 0,72 M parametrach i przy obciążeniu 11,74 GFLOPs. Model RTLinearFormer (2025) stosuje uwagą liniową, notując płynność 66,7 FPS przy 78,41\% mIoU.
+Algorytmem krytycznym dla badanego obszaru jest mechanizm modelu FANet \bibref{hu2020fanet}. Zmiana operacji Softmax na \textit{cosine similarity} zapewnia liniową kalkulację uwagi ($\mathcal{O}(nc^2)$). Kluczowe dane ewaluacyjne dla modelu FAscnn++\_V18 i sieci referencyjnych zamieszczono w Tabeli \ref{tab:architektury}.
+
+\section{Luka badawcza}
+Rynek systemów wizyjnych jest silnie spolaryzowany. Wysoce precyzyjne sieci (PIDNet \bibref{xu2023pidnet}, DDRNet \bibref{hong2021ddrnet}, GCNet) wymagają infrastruktury wielkości 20--100 GFLOPs, wykluczając instalacje w lekkich jednostkach (UAV). Z kolei modele z segmentu \textit{ultra-lightweight} (PP-LiteSeg-T1 \bibref{peng2022ppliteseg}, STDC2-Seg50 \bibref{fan2021stdc}, LCNet3\_7 \bibref{shi2024lcnet}) osiągają płynność kosztem kompresji klatki do formatów podrzędnych (np. $512 \times 1024$). Generuje to utratę kluczowych detali krawędzi i spadki precyzji w obrębie małych obiektów.
+
+Wymuszenie obsługi klatek w rozmiarze natywnym ($1024 \times 2048$) prowadzi do utraty parametrów pracy. TopFormer-T \bibref{zhang2022topformer} oferuje $\sim$100 FPS (RTX 3090) z bardzo słabym wynikiem 70,70\% mIoU. Sieć SeaFormer-S \bibref{wan2023seaformer} gwarantuje 76,10\% mIoU, ale z płynnością jedynie 7,6 FPS na urządzeniach mobilnych.
+
+Zidentyfikowana luka sprzętowa i algorytmiczna dowodzi braku architektury konwolucyjnej, która jednocześnie:
+\begin{itemize}
+    \item \textbf{Przełamuje kompromis rozdzielczości:} przetwarza niezmodyfikowane wideo w jakości $1024 \times 2048$ zachowując zapotrzebowanie do 10 GFLOPs i budżet do 1,2 miliona parametrów.
+    \item \textbf{Gwarantuje dokładność krytyczną:} osiąga jakość przekraczającą 65\% mIoU na zbiorze Cityscapes przy zachowaniu rozdzielczości rzędu natywnego.
+    \item \textbf{Oferuje elastyczne środowisko dla badań (Edge AI):} posiada wdrożenia pozwalające na bezkompromisowe badania ablacyjne dla nowo projektowanych modułów sprzętowych.
+\end{itemize}
+
+\section{Sformułowanie problemu badawczego}
+Celem naukowym pracy jest wdrożenie elastycznej architektury wpasowującej się w powyższą lukę. Problem sprowadzono do weryfikacji pytań badawczych:
+\begin{itemize}
+    \item Czy topologiczna poprawa układów z rodziny Fast-SCNN (jako wariant FAscnn++) oferuje zoptymalizowany stosunek mIoU do GFLOPs dla predykcji pełnoklatkowej ($1024 \times 2048$) w odniesieniu do sieci \textit{ultra-lightweight}?
+    \item Jak zdefiniowane mechanizmy splotowe wpływają na narzut strukturalny i jakość klasyfikacji poszczególnych klas?
+    \item Czy dodatkowe zużycie pasma pamięci wbudowanej (\textit{memory bandwidth}) w ramach mechanizmów Fast Attention uniemożliwi płynne działanie sieci utrzymanej w restrykcjach $<10$ GFLOPs?
+\end{itemize}

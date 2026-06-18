@@ -1,0 +1,50 @@
+% This file is auto-generated. Do not edit manually.
+\subsection{Zestawienie wyników eksperymentalnych}
+W niniejszej sekcji przedstawiono szczegółowe zestawienie wyników uzyskanych dla wszystkich testowanych architektur. Porównanie obejmuje zarówno miary jakości segmentacji (mIoU, Pixel Accuracy), powiązanych z rodziną FAscnn++ i modelami referencyjnymi, jak i parametry wydajnościowe (FPS na CPU i GPU).
+
+\begin{table}[htbp]
+  \centering
+  \caption{Porównanie kluczowych architektur (baseline vs najlepsze FAscnn++).}
+  \label{tab:best-models-comparison}
+  \begin{tabular}{lcccc}
+    \toprule
+    Model & mIoU & Pixel Acc. & CPU FPS & GPU FPS \\
+    \midrule
+    \textbf{FAscnn++\_V18} & \underline{0{,}707} & \underline{0{,}949} & \underline{2{,}14} & \underline{343{,}17} \\
+    \textbf{FastSCNN} & 0{,}695 & 0{,}949 & 1{,}82 & 339{,}37 \\
+    \textbf{FAscnn++\_V17} & 0{,}445 & 0{,}857 & \underline{2{,}33} & \underline{352{,}01} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Pełne zestawienie wyników dla wszystkich przetestowanych modeli.}
+  \label{tab:all-models-summary}
+  \small
+  \begin{tabular}{lcccc}
+    \toprule
+    Model & mIoU & Pixel Acc. & CPU FPS & GPU FPS \\
+    \midrule
+    \textit{Modele bazowe} & & & & \\
+    \texttt{FastSCNN} & 0{,}695 & 0{,}949 & 1{,}82 & 339{,}37 \\
+    \texttt{FastSCNN\_512x1024} & 0{,}593 & 0{,}926 & 10{,}27 & 625{,}18 \\
+    \texttt{FastSCNN\_512x512} & 0{,}457 & 0{,}892 & 30{,}09 & 641{,}48 \\
+    \texttt{ENet} & 0{,}410 & 0{,}832 & 0{,}83 & 85{,}07 \\
+    \texttt{ENetv2} & 0{,}304 & 0{,}741 & 1{,}11 & 134{,}50 \\
+    \texttt{ENetv3} & 0{,}137 & 0{,}442 & 1{,}76 & 81{,}92 \\
+    \midrule
+    \textit{Warianty FAscnn++} & & & & \\
+    \textbf{FAscnn++\_V18} & \underline{0{,}707} & \underline{0{,}949} & 2{,}14 & 343{,}17 \\
+    \texttt{FAscnn++\_V18\_512x1024} & 0{,}605 & 0{,}928 & 10{,}24 & 557{,}54 \\
+    \texttt{FAscnn++\_V18\_512x512} & 0{,}459 & 0{,}891 & \underline{30{,}28} & 572{,}69 \\
+    \textbf{FAscnn++\_V17} & 0{,}445 & 0{,}857 & 2{,}33 & 352{,}01 \\
+    \texttt{FAscnn++\_V13} & 0{,}402 & 0{,}835 & 0{,}86 & 27{,}14 \\
+    \texttt{FAscnn++\_V14} & 0{,}387 & 0{,}820 & 0{,}78 & 26{,}77 \\
+    \texttt{FAscnn++\_V3} & 0{,}302 & 0{,}726 & 0{,}32 & 44{,}11 \\
+    \texttt{FAscnn++\_V16} & 0{,}210 & 0{,}588 & 1{,}20 & 66{,}74 \\
+    \texttt{FAscnn++\_V15} & 0{,}136 & 0{,}337 & 1{,}83 & 97{,}46 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
