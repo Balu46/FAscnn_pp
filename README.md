@@ -22,7 +22,7 @@ Najlepszy model osiąga **70.68% mIoU** na zbiorze Cityscapes przy natywnej rozd
 ### 1. Pobranie repozytorium
 Sklonuj repozytorium projektu na swój komputer i przejdź do głównego katalogu:
 ```bash
-git clone https://github.com/Balu46/Fascnn-.git 
+git clone https://github.com/Balu46/FAscnn_pp.git
 cd FAMB-fast-segmentation
 ```
 
