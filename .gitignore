@@ -6,7 +6,6 @@ best_model/
 log/
 .vscode/
 config.yaml
-results/
 .config.yaml.swp
 archiwum/
 *.zip

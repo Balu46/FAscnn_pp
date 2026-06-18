@@ -1,0 +1,77 @@
+========== MODEL ==========
+Model: FAscnn_pp_V17
+Ablation: none
+Weights: /home/jan/Informatyka/ML/segmentation/FAMB-fast-segmentation/checkpoints/FAscnn_pp_V17/best.pt
+Device (eval): cuda
+Image size: 1024x2048
+GFLOPs (@1024x2048): 14.158
+Parameters: 1.144 M
+Output classes in model: 19
+Eval classes: 19 (trainId)
+
+========== QUALITY ==========
+Pixel Accuracy: 0.856917
+Mean IoU (overall): 0.445239
+IoU per class (trainId 0..18):
+  Class 00 Name road           : 0.911936
+  Class 01 Name sidewalk       : 0.571239
+  Class 02 Name building       : 0.756187
+  Class 03 Name wall           : 0.136200
+  Class 04 Name fence          : 0.235230
+  Class 05 Name pole           : 0.354916
+  Class 06 Name traffic light  : 0.270882
+  Class 07 Name traffic sign   : 0.459422
+  Class 08 Name vegetation     : 0.729066
+  Class 09 Name terrain        : 0.385117
+  Class 10 Name sky            : 0.885823
+  Class 11 Name person         : 0.473661
+  Class 12 Name rider          : 0.184867
+  Class 13 Name car            : 0.794456
+  Class 14 Name truck          : 0.230513
+  Class 15 Name bus            : 0.413129
+  Class 16 Name train          : 0.153639
+  Class 17 Name motorcycle     : 0.034354
+  Class 18 Name bicycle        : 0.478897
+
+========== DATASET LOOP PERFORMANCE ==========
+Dataset FPS (@1024x2048): 339.29
+
+[Batch latency over DataLoader loop]
+Mean [ms]: 2.947
+P50  [ms]: 2.930
+P95  [ms]: 2.949
+P99  [ms]: 3.120
+Min  [ms]: 2.895
+Max  [ms]: 9.895
+
+[Per-image latency over DataLoader loop]
+Mean [ms]: 2.947
+P50  [ms]: 2.930
+P95  [ms]: 2.949
+P99  [ms]: 3.120
+Min  [ms]: 2.895
+Max  [ms]: 9.895
+
+========== CPU BENCH (E2E: data+forward+argmax | batch=1) ==========
+CPU threads: 1
+Warmup iters: 20
+Timed iters: 200
+FPS: 2.33
+Latency mean [ms]: 429.949
+Latency P50  [ms]: 429.967
+Latency P95  [ms]: 433.999
+Latency P99  [ms]: 436.276
+Latency min  [ms]: 423.611
+Latency max  [ms]: 436.494
+
+========== GPU BENCH (forward-only | synthetic | sync) ==========
+GPU batch size: 1
+Warmup iters: 50
+Timed iters: 200
+FPS (throughput): 352.01
+Latency mean [ms]: 2.841
+Latency P50  [ms]: 2.840
+Latency P95  [ms]: 2.854
+Latency P99  [ms]: 2.860
+Latency min  [ms]: 2.822
+Latency max  [ms]: 2.867

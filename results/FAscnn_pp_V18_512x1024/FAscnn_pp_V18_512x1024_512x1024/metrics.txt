@@ -1,0 +1,77 @@
+========== MODEL ==========
+Model: FAscnn_pp_V18_512x1024
+Ablation: none
+Weights: /home/jan/Informatyka/ML/segmentation/FAMB-fast-segmentation/checkpoints/FAscnn_pp_V18_512x1024/best.pt
+Device (eval): cuda
+Image size: 512x1024
+GFLOPs (@512x1024): 3.565
+Parameters: 1.169 M
+Output classes in model: 19
+Eval classes: 19 (trainId)
+
+========== QUALITY ==========
+Pixel Accuracy: 0.928157
+Mean IoU (overall): 0.605213
+IoU per class (trainId 0..18):
+  Class 00 Name road           : 0.963548
+  Class 01 Name sidewalk       : 0.732326
+  Class 02 Name building       : 0.873054
+  Class 03 Name wall           : 0.478270
+  Class 04 Name fence          : 0.427481
+  Class 05 Name pole           : 0.392977
+  Class 06 Name traffic light  : 0.363824
+  Class 07 Name traffic sign   : 0.534262
+  Class 08 Name vegetation     : 0.879999
+  Class 09 Name terrain        : 0.545693
+  Class 10 Name sky            : 0.911927
+  Class 11 Name person         : 0.608832
+  Class 12 Name rider          : 0.360122
+  Class 13 Name car            : 0.881452
+  Class 14 Name truck          : 0.635582
+  Class 15 Name bus            : 0.631777
+  Class 16 Name train          : 0.425093
+  Class 17 Name motorcycle     : 0.309174
+  Class 18 Name bicycle        : 0.543658
+
+========== DATASET LOOP PERFORMANCE ==========
+Dataset FPS (@512x1024): 394.46
+
+[Batch latency over DataLoader loop]
+Mean [ms]: 2.535
+P50  [ms]: 2.486
+P95  [ms]: 2.536
+P99  [ms]: 3.121
+Min  [ms]: 2.063
+Max  [ms]: 22.766
+
+[Per-image latency over DataLoader loop]
+Mean [ms]: 2.535
+P50  [ms]: 2.486
+P95  [ms]: 2.536
+P99  [ms]: 3.121
+Min  [ms]: 2.063
+Max  [ms]: 22.766
+
+========== CPU BENCH (E2E: data+forward+argmax | batch=1) ==========
+CPU threads: 1
+Warmup iters: 20
+Timed iters: 200
+FPS: 10.24
+Latency mean [ms]: 97.682
+Latency P50  [ms]: 97.285
+Latency P95  [ms]: 99.449
+Latency P99  [ms]: 100.100
+Latency min  [ms]: 96.316
+Latency max  [ms]: 100.913
+
+========== GPU BENCH (forward-only | synthetic | sync) ==========
+GPU batch size: 1
+Warmup iters: 50
+Timed iters: 200
+FPS (throughput): 557.54
+Latency mean [ms]: 1.794
+Latency P50  [ms]: 1.791
+Latency P95  [ms]: 1.824
+Latency P99  [ms]: 1.834
+Latency min  [ms]: 1.771
+Latency max  [ms]: 1.872
