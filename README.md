@@ -1,6 +1,6 @@
 # FAscnn_pp - Szybka Segmentacja Semantyczna (Fast Attention SCNN)
 
-[![License: Academic & Non-Commercial](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/get-started/locally/)
 
@@ -22,7 +22,7 @@ Najlepszy model osiąga **70.68% mIoU** na zbiorze Cityscapes przy natywnej rozd
 ### 1. Pobranie repozytorium
 Sklonuj repozytorium projektu na swój komputer i przejdź do głównego katalogu:
 ```bash
-git clone https://github.com/twoja_nazwa_uzytkownika/FAMB-fast-segmentation.git # Uzupełnij właściwym adresem jeśli udostępniasz kod
+git clone https://github.com/Balu46/Fascnn-.git 
 cd FAMB-fast-segmentation
 ```
 
@@ -83,9 +83,7 @@ Kolejne kroki zapiszą swoje wyniki, checkpointy oraz wykresy w odpowiednich pod
 
 ## ⚖️ Licencja i cytowanie
 
-Projekt dostępny jest na **podwójnej licencji do użytku akademickiego i niekomercyjnego**. 
-* **Zezwolono na:** Użytek w badaniach naukowych, edukacji oraz projektach non-profit.
-* **Zabroniono:** Wykorzystania komercyjnego i odsprzedaży kodu bez wyłącznej zgody.
+Projekt udostępniany jest na warunkach **Licencji Apache 2.0**. 
 Szczegóły znajdują się w pliku [LICENSE](LICENSE).
 
 Jeżeli chcesz wspomnieć lub wykorzystać kod FAscnn_pp w swoich projektach/badaniach, prosimy o podanie referencji:
