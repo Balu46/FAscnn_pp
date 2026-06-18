@@ -112,7 +112,7 @@ Narzut na sieć kwantyfikowany jest szybkością konwersji klatek obrazowych rzu
 Badania postępowały według struktury iteracyjnej, modyfikując implementacje w ścisłych weryfikacjach przyrostu jakości rzutowanej względem utraty wydajności obliczeniowej z fuzji.
 
 \subsection{Etap 1: Inicjalizacja architektur referencyjnych}
-Udokumentowano wydajność i celność środowiska Fast-SCNN jako docelowe kryterium akceptacji (mIoU: 0,641, GPU FPS: 267). Zestawienie ENet i okrojonych wariantów ENetv2 i v3 obaliło zasadność ucinania pętli w strukturach sekwencyjnych – straty opóźnień redukują cechy brzegowe bez równoległych zysków ze wzrostu taktowania przy pełnych rozdzielczościach. Uwarunkowało to poszukiwania fuzji strumieniowej.
+Udokumentowano wydajność i celność środowiska Fast-SCNN jako docelowe kryterium akceptacji (mIoU: 0,695, GPU FPS: 339). Zestawienie ENet i okrojonych wariantów ENetv2 i v3 obaliło zasadność ucinania pętli w strukturach sekwencyjnych – straty opóźnień redukują cechy brzegowe bez równoległych zysków ze wzrostu taktowania przy pełnych rozdzielczościach. Uwarunkowało to poszukiwania fuzji strumieniowej.
 
 \subsection{Etap 2: Ewolucja modelu FAscnn++}
 Ciąg badań w oparciu o ponad 30 kompilacji rzutował prace analityczne na 3 paradygmaty.
@@ -124,7 +124,7 @@ Przetestowano struktury wielogałęziowe łączone za pomocą bloku wąskiego ga
 Próba reparametryzacji z warstw splotowych do domeny Transformer. Zastosowanie \texttt{PatchEmbedConv} uwarunkowało konwersję map do systemu tokenów, rzutując wektor do klasycznych splotów w finalnej części obróbki i powodując silne interferencje artefaktów na osi krawędzi (mIoU rzędu 0,359) z załamaniem przepustowości wejściowych.
 
 \subsubsection{Faza 3: Fuzje dualne i Fast Attention (Modele V17--V18)}
-Stanowisko docelowe w projekcie wdrożyło paradygmat rozdziału torów z nałożonym obciążeniem na dekompozycję kontekstową we wczesnych kompresjach z \texttt{LearningToDownsampleV2}. Do fuzji odizolowanych cech zastosowano ujęcie inspirowane algorytmem BiSeNet. Osiągnięto optymalizację w granicach 300 FPS. Do dopełnienia celowości wdrożono optymalną iterację modelu (V18) z uwzględnionym na gałęzi wariacyjnej modułem szybkiej uwagi. Rozwiązanie to wywindowało parametry startowe na progi 0,655 mIoU.
+Stanowisko docelowe w projekcie wdrożyło paradygmat rozdziału torów z nałożonym obciążeniem na dekompozycję kontekstową we wczesnych kompresjach z \texttt{LearningToDownsampleV2}. Do fuzji odizolowanych cech zastosowano ujęcie inspirowane algorytmem BiSeNet. Osiągnięto optymalizację w granicach 300 FPS. Do dopełnienia celowości wdrożono optymalną iterację modelu (V18) z uwzględnionym na gałęzi wariacyjnej modułem szybkiej uwagi. Rozwiązanie to wywindowało parametry startowe na progi 0,707 mIoU.
 
 \subsection{Etap 3: Walidacje końcowe i śledzenie zmian (Ablation)}
 Etap optymalizacji parametrów brzegowych dla ulepszonego systemu udokumentował następujące zdarzenia analityczne:
