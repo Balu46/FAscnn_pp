@@ -48,7 +48,7 @@ dirs = [
     "Step4_CP_1024x2048", "Step5_Weights_1024x2048", "Step6_Boosted_1024x2048"
 ]
 
-base_dir = "/home/jan/Informatyka/ML/segmentation/FAMB-fast-segmentation/results"
+base_dir = "./results"
 
 results = {}
 for d in dirs:
